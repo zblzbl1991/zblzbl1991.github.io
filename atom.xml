@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://zblzbl1991.github.io</id>
     <title>Gridea</title>
-    <updated>2020-03-16T13:12:54.335Z</updated>
+    <updated>2020-03-19T13:16:57.058Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://zblzbl1991.github.io"/>
     <link rel="self" href="https://zblzbl1991.github.io/atom.xml"/>
@@ -10,6 +10,141 @@
     <logo>https://zblzbl1991.github.io/images/avatar.png</logo>
     <icon>https://zblzbl1991.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, Gridea</rights>
+    <entry>
+        <title type="html"><![CDATA[SpringCloudGateway使用nacos实现动态路由]]></title>
+        <id>https://zblzbl1991.github.io/post/springcloudgateway-shi-yong-nacos-shi-xian-dong-tai-lu-you/</id>
+        <link href="https://zblzbl1991.github.io/post/springcloudgateway-shi-yong-nacos-shi-xian-dong-tai-lu-you/">
+        </link>
+        <updated>2020-03-18T13:14:54.000Z</updated>
+        <content type="html"><![CDATA[<p><em>版本</em>  Greenwich.SR5</p>
+<p>我实现动态路由的方案是<br>
+使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化</p>
+<pre><code class="language-java">@Configuration
+@RefreshScope
+public class DynamicRoutingConfig implements ApplicationEventPublisherAware {
+	private final Logger logger = LoggerFactory.getLogger(DynamicRoutingConfig.class);
+	@Value(&quot;${spring.cloud.nacos.dynamic-data-id}&quot;)
+	private String DATA_ID;
+	@Value(&quot;${spring.cloud.nacos.config.server-addr}&quot;)
+	private String nacosServerUrl;
+	private static final String Group = &quot;DEFAULT_GROUP&quot;;
+
+
+	@Autowired
+	private RouteDefinitionWriter routeDefinitionWriter;
+
+	private ApplicationEventPublisher applicationEventPublisher;
+
+	@Bean
+	public void refreshRouting() throws NacosException {
+		Properties properties = new Properties();
+		properties.put(PropertyKeyConst.SERVER_ADDR, nacosServerUrl);
+
+		ConfigService configService = NacosFactory.createConfigService(properties);
+		//初始化获取当前路由配置
+		String config = initDynamicRoutes(configService);
+		configService.addListener(DATA_ID, Group, new Listener() {
+			@Override
+			public Executor getExecutor() {
+				return null;
+			}
+			@Override
+			public void receiveConfigInfo(String configInfo) {
+				logger.info(configInfo);
+
+					List&lt;RouteDefinition&gt; definitions = JSON.parseArray(configInfo, RouteDefinition.class);
+				definitions.forEach(definition-&gt;update(definition));
+			}
+		});
+	}
+
+	/**
+	 * 初始化动态路由配置
+	 * @param configService
+	 * @return
+	 * @throws NacosException
+	 */
+	private String initDynamicRoutes(ConfigService configService) throws NacosException {
+		String configInfo = configService.getConfig(DATA_ID, Group, 5000);
+		List&lt;RouteDefinition&gt; definitions = JSON.parseArray(configInfo, RouteDefinition.class);
+		definitions.forEach(definition-&gt;update(definition));
+		return configInfo;
+	}
+
+	public String update(RouteDefinition routeDefinition){
+		try {
+			this.routeDefinitionWriter.delete(Mono.just(routeDefinition.getId()));
+		} catch (Exception e) {
+			return &quot;update fail,not find route  routeId: &quot;+routeDefinition.getId();
+		}
+		try {
+			routeDefinitionWriter.save(Mono.just(routeDefinition)).subscribe();
+			this.applicationEventPublisher.publishEvent(new RefreshRoutesEvent(this));
+			return &quot;success&quot;;
+		} catch (Exception e) {
+			return &quot;update route  fail&quot;;
+		}
+	}
+	//删除路由
+	public Mono&lt;ResponseEntity&lt;Object&gt;&gt; delete(String id) {
+		return this.routeDefinitionWriter.delete(Mono.just(id))
+				.then(Mono.defer(() -&gt; Mono.just(ResponseEntity.ok().build())))
+				.onErrorResume(t -&gt; t instanceof NotFoundException, t -&gt; Mono.just(ResponseEntity.notFound().build()));
+	}
+	//增加路由
+	public String add(RouteDefinition definition) {
+		routeDefinitionWriter.save(Mono.just(definition)).subscribe();
+		this.applicationEventPublisher.publishEvent(new RefreshRoutesEvent(this));
+		return &quot;success&quot;;
+	}
+
+	@Override
+	public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+		this.applicationEventPublisher = applicationEventPublisher;
+	}
+
+	public static void main(String[] args) throws NacosException, InterruptedException {
+		String serverAddr = &quot;localhost&quot;;
+		String dataId = &quot;gateway&quot;;
+		String group = &quot;DEFAULT_GROUP&quot;;
+		Properties properties = new Properties();
+		properties.put(PropertyKeyConst.SERVER_ADDR, serverAddr);
+		ConfigService configService = NacosFactory.createConfigService(properties);
+		String content = configService.getConfig(dataId, group, 5000);
+		System.out.println(content);
+		configService.addListener(dataId, group, new Listener() {
+			@Override
+			public void receiveConfigInfo(String configInfo) {
+				System.out.println(&quot;recieve:&quot; + configInfo);
+			}
+
+			@Override
+			public Executor getExecutor() {
+				return null;
+			}
+		});
+
+		boolean isPublishOk = configService.publishConfig(dataId, group, &quot;content&quot;);
+		System.out.println(isPublishOk);
+
+		Thread.sleep(3000);
+		content = configService.getConfig(dataId, group, 5000);
+		System.out.println(content);
+
+		boolean isRemoveOk = configService.removeConfig(dataId, group);
+		System.out.println(isRemoveOk);
+		Thread.sleep(3000);
+
+		content = configService.getConfig(dataId, group, 5000);
+		System.out.println(content);
+		Thread.sleep(300000);
+
+	}
+}
+ 
+</code></pre>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Hello Gridea]]></title>
         <id>https://zblzbl1991.github.io/post/hello-gridea/</id>

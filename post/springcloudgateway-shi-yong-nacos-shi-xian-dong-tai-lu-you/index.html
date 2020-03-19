@@ -1,0 +1,294 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SpringCloudGateway使用nacos实现动态路由 | Gridea</title>
+<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1584623809929">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="SpringCloudGateway使用nacos实现动态路由 | Gridea - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="版本  Greenwich.SR5
+我实现动态路由的方案是
+使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化
+@Configu..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://zblzbl1991.github.io">
+  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1584623809929" alt="">
+  </a>
+  <h1 class="site-title">
+    Gridea
+  </h1>
+  <p class="site-description">
+    温故而知新
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              SpringCloudGateway使用nacos实现动态路由
+            </h2>
+            <div class="post-info">
+              <span>
+                2020-03-18
+              </span>
+              <span>
+                3 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p><em>版本</em>  Greenwich.SR5</p>
+<p>我实现动态路由的方案是<br>
+使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化</p>
+<pre><code class="language-java">@Configuration
+@RefreshScope
+public class DynamicRoutingConfig implements ApplicationEventPublisherAware {
+	private final Logger logger = LoggerFactory.getLogger(DynamicRoutingConfig.class);
+	@Value(&quot;${spring.cloud.nacos.dynamic-data-id}&quot;)
+	private String DATA_ID;
+	@Value(&quot;${spring.cloud.nacos.config.server-addr}&quot;)
+	private String nacosServerUrl;
+	private static final String Group = &quot;DEFAULT_GROUP&quot;;
+
+
+	@Autowired
+	private RouteDefinitionWriter routeDefinitionWriter;
+
+	private ApplicationEventPublisher applicationEventPublisher;
+
+	@Bean
+	public void refreshRouting() throws NacosException {
+		Properties properties = new Properties();
+		properties.put(PropertyKeyConst.SERVER_ADDR, nacosServerUrl);
+
+		ConfigService configService = NacosFactory.createConfigService(properties);
+		//初始化获取当前路由配置
+		String config = initDynamicRoutes(configService);
+		configService.addListener(DATA_ID, Group, new Listener() {
+			@Override
+			public Executor getExecutor() {
+				return null;
+			}
+			@Override
+			public void receiveConfigInfo(String configInfo) {
+				logger.info(configInfo);
+
+					List&lt;RouteDefinition&gt; definitions = JSON.parseArray(configInfo, RouteDefinition.class);
+				definitions.forEach(definition-&gt;update(definition));
+			}
+		});
+	}
+
+	/**
+	 * 初始化动态路由配置
+	 * @param configService
+	 * @return
+	 * @throws NacosException
+	 */
+	private String initDynamicRoutes(ConfigService configService) throws NacosException {
+		String configInfo = configService.getConfig(DATA_ID, Group, 5000);
+		List&lt;RouteDefinition&gt; definitions = JSON.parseArray(configInfo, RouteDefinition.class);
+		definitions.forEach(definition-&gt;update(definition));
+		return configInfo;
+	}
+
+	public String update(RouteDefinition routeDefinition){
+		try {
+			this.routeDefinitionWriter.delete(Mono.just(routeDefinition.getId()));
+		} catch (Exception e) {
+			return &quot;update fail,not find route  routeId: &quot;+routeDefinition.getId();
+		}
+		try {
+			routeDefinitionWriter.save(Mono.just(routeDefinition)).subscribe();
+			this.applicationEventPublisher.publishEvent(new RefreshRoutesEvent(this));
+			return &quot;success&quot;;
+		} catch (Exception e) {
+			return &quot;update route  fail&quot;;
+		}
+	}
+	//删除路由
+	public Mono&lt;ResponseEntity&lt;Object&gt;&gt; delete(String id) {
+		return this.routeDefinitionWriter.delete(Mono.just(id))
+				.then(Mono.defer(() -&gt; Mono.just(ResponseEntity.ok().build())))
+				.onErrorResume(t -&gt; t instanceof NotFoundException, t -&gt; Mono.just(ResponseEntity.notFound().build()));
+	}
+	//增加路由
+	public String add(RouteDefinition definition) {
+		routeDefinitionWriter.save(Mono.just(definition)).subscribe();
+		this.applicationEventPublisher.publishEvent(new RefreshRoutesEvent(this));
+		return &quot;success&quot;;
+	}
+
+	@Override
+	public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+		this.applicationEventPublisher = applicationEventPublisher;
+	}
+
+	public static void main(String[] args) throws NacosException, InterruptedException {
+		String serverAddr = &quot;localhost&quot;;
+		String dataId = &quot;gateway&quot;;
+		String group = &quot;DEFAULT_GROUP&quot;;
+		Properties properties = new Properties();
+		properties.put(PropertyKeyConst.SERVER_ADDR, serverAddr);
+		ConfigService configService = NacosFactory.createConfigService(properties);
+		String content = configService.getConfig(dataId, group, 5000);
+		System.out.println(content);
+		configService.addListener(dataId, group, new Listener() {
+			@Override
+			public void receiveConfigInfo(String configInfo) {
+				System.out.println(&quot;recieve:&quot; + configInfo);
+			}
+
+			@Override
+			public Executor getExecutor() {
+				return null;
+			}
+		});
+
+		boolean isPublishOk = configService.publishConfig(dataId, group, &quot;content&quot;);
+		System.out.println(isPublishOk);
+
+		Thread.sleep(3000);
+		content = configService.getConfig(dataId, group, 5000);
+		System.out.println(content);
+
+		boolean isRemoveOk = configService.removeConfig(dataId, group);
+		System.out.println(isRemoveOk);
+		Thread.sleep(3000);
+
+		content = configService.getConfig(dataId, group, 5000);
+		System.out.println(content);
+		Thread.sleep(300000);
+
+	}
+}
+ 
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://zblzbl1991.github.io/post/hello-gridea/">
+              <h3 class="post-title">
+                Hello Gridea
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+  <a class="rss" href="https://zblzbl1991.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>
