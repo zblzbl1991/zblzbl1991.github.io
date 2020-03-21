@@ -1,0 +1,418 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SpringCloudGateway获取请求参数 | Gridea</title>
+<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1584761432495">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="SpringCloudGateway获取请求参数 | Gridea - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="最近需要在网关层做参数校验,碰到了一个很坑的东西,post请求获取body体的参数后,会出现各种问题,网上一大堆互相抄来抄去的所谓的&quot;解决方案&quot;,没一个是靠谱的,经过多方面的研究,参考官方提供的一个FilterModif..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://zblzbl1991.github.io">
+  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1584761432495" alt="">
+  </a>
+  <h1 class="site-title">
+    Gridea
+  </h1>
+  <p class="site-description">
+    温故而知新
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              SpringCloudGateway获取请求参数
+            </h2>
+            <div class="post-info">
+              <span>
+                2020-03-21
+              </span>
+              <span>
+                6 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>最近需要在网关层做参数校验,碰到了一个很坑的东西,post请求获取body体的参数后,会出现各种问题,网上一大堆互相抄来抄去的所谓的&quot;解决方案&quot;,没一个是靠谱的,经过多方面的研究,参考官方提供的一个Filter<code>ModifyRequestBodyGatewayFilterFactory</code>,最后实现如下:</p>
+<pre><code class="language-java">/**
+ * @author zhaobaolong
+ * @date 2020/3/12 9:35
+ * @description 网关签名校验过滤器
+ */
+@Slf4j
+@Component
+public class SignValidGatewayFilterFactory extends AbstractGatewayFilterFactory&lt;SignValidGatewayFilterFactory.Config&gt;  implements Ordered {
+    public static final String PARTS_KEY = &quot;parts&quot;;
+    private static final String NOCESTR=&quot;nocestr&quot;;
+    private static final String TIMESTAMP=&quot;timestamp&quot;;
+    private final List&lt;HttpMessageReader&lt;?&gt;&gt; messageReaders;
+    @Autowired
+    ObjectMapper objectMapper ;
+
+    @Value(&quot;${spring.profiles.active}&quot;)
+    private String profile;
+
+    @Autowired
+    private RedissonClient redissonClient;
+
+    public SignValidGatewayFilterFactory() {
+        super(SignValidGatewayFilterFactory.Config.class);
+        this.messageReaders = HandlerStrategies.withDefaults().messageReaders();
+    }
+
+    @Override
+    public GatewayFilter apply(Config config) {
+        return (exchange, chain) -&gt; {
+            ServerRequest serverRequest = ServerRequest.create(exchange, SignValidGatewayFilterFactory.this.messageReaders);
+            HttpMethod method = exchange.getRequest().getMethod();
+
+            boolean swaggerFlag=signSwagger(exchange);
+            if(swaggerFlag){
+                return chain.filter(exchange);
+            }
+            if(method.compareTo(HttpMethod.GET)==0){
+                MultiValueMap&lt;String, String&gt; queryParams = exchange.getRequest().getQueryParams();
+                Map&lt;String, String&gt; stringStringMap = queryParams.toSingleValueMap();
+                boolean flag = singValid(stringStringMap);
+                if(!flag){
+                    return Mono.error(new ValidParameterFailException(&quot;无效参数&quot;));
+                }
+                return chain.filter(exchange);
+            }else if(method.compareTo(HttpMethod.POST)==0){
+                //mediaType
+                MediaType mediaType = exchange.getRequest().getHeaders().getContentType();
+                if (MediaType.APPLICATION_FORM_URLENCODED.isCompatibleWith(mediaType)) {
+                    //匹配form表单
+                    Mono&lt;String&gt; modifyMap = serverRequest.bodyToMono(String.class).flatMap(body -&gt; {
+                            Map&lt;String, String&gt; bodyMap = decodeFormBody(body);
+                        String string = JSON.toJSONString(bodyMap);
+                        log.info(string);
+                        boolean flag=   singValid(bodyMap);
+                        if(!flag){
+                           return Mono.error(new ValidParameterFailException(&quot;无效参数&quot;));
+                        }
+                        return Mono.just(encodeFormBody(bodyMap));
+                    });
+                    return rebuildBody(exchange, chain, modifyMap);
+                }else if(MediaType.APPLICATION_JSON_UTF8.isCompatibleWith(mediaType)||MediaType.APPLICATION_JSON_UTF8.isCompatibleWith(mediaType)){
+                    //如果是json格式
+                    Mono&lt;String&gt; modifyMap = serverRequest.bodyToMono(String.class).flatMap(body -&gt; {
+                        Map&lt;String, String&gt; bodyMap = decodeJsonBody(body);
+                        boolean flag = singValid(bodyMap);
+                        if(!flag){
+                            return Mono.error(new ValidParameterFailException(&quot;无效参数&quot;));
+                        }
+                        return Mono.just(encodeJsonBody(bodyMap));
+                    });
+                    return rebuildBody(exchange, chain, modifyMap);
+                }
+                else{
+                    return chain.filter(exchange);
+                }
+            }else{
+                return chain.filter(exchange);
+            }
+
+
+
+        };
+    }
+    /**
+     *判断是否是swagger查询
+     *@author zhaobaolong
+     *@param exchange
+     *@return
+     *@date 2020/3/20 9:20
+     */
+    private boolean signSwagger(ServerWebExchange exchange) {
+        //只有dev和测试环境才需要
+        if(&quot;dev&quot;.equals(profile)){
+            List&lt;String&gt; referer = exchange.getRequest().getHeaders().get(&quot;Referer&quot;);
+            String s = referer.get(0);
+            if(s.contains(&quot;swagger-ui.html&quot;)){
+                return true;
+            }
+            String rawPath = exchange.getRequest().getURI().getRawPath();
+            if(&quot;/v2/api-docs&quot;.equals(rawPath)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Mono&lt;Void&gt; rebuildBody(ServerWebExchange exchange, GatewayFilterChain chain, Mono&lt;String&gt; modifyMap) {
+        BodyInserter&lt;Mono&lt;String&gt;, ReactiveHttpOutputMessage&gt; bodyInserter = BodyInserters.fromPublisher(modifyMap, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.putAll(exchange.getRequest().getHeaders());
+        headers.remove(HttpHeaders.CONTENT_LENGTH);
+
+        CachedBodyOutputMessage outputMessage = new CachedBodyOutputMessage(exchange, headers);
+        return bodyInserter.insert(outputMessage,new BodyInserterContext()).then(Mono.defer(()-&gt;{
+            ServerHttpRequest decorator = SignValidGatewayFilterFactory.this.decorate(exchange, headers, outputMessage);
+            return chain.filter(exchange.mutate().request(decorator).build());
+        }));
+    }
+    /**
+     *将map转成form表单形式参数
+     *@author zhaobaolong
+     *@param map
+     *@return
+     *@date 2020/3/17 11:18
+     */
+    private String encodeFormBody(Map&lt;String, String&gt; map) {
+        return map.entrySet().stream().map(e-&gt;e.getKey()+&quot;=&quot;+e.getValue()).collect(Collectors.joining(&quot;&amp;&quot;));
+    }
+    /**
+     *将form表单形式参数转成map
+     *@author zhaobaolong
+     *@param body
+     *@return
+     *@date 2020/3/17 11:18
+     */
+    private Map&lt;String, String&gt; decodeFormBody(String body) {
+        return Arrays.stream(body.split(&quot;&amp;&quot;)).map(str-&gt;str.split(&quot;=&quot;)).collect(Collectors.toMap(arr-&gt;arr[0],arr-&gt;arr[1]));
+    }
+    /**
+     *将map转成json形式参数
+     *@author zhaobaolong
+     *@param map
+     *@return
+     *@date 2020/3/17 11:18
+     */
+    private String encodeJsonBody(Map&lt;String, String&gt; map) {
+
+        try {
+            return objectMapper.writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return Mono.empty().toString();
+        }
+
+    }
+    /**
+     *将json参数转成map
+     *@author zhaobaolong
+     *@param body
+     *@return
+     *@date 2020/3/17 11:18
+     */
+    private Map&lt;String, String&gt; decodeJsonBody(String body) {
+        HashMap hashMap =new HashMap();
+        try {
+            hashMap=  objectMapper.readValue(body, HashMap.class);
+            return hashMap;
+        } catch (IOException e) {
+            e.printStackTrace();
+           return hashMap;
+        }
+    }
+
+    ServerHttpRequestDecorator decorate(ServerWebExchange exchange, HttpHeaders headers, CachedBodyOutputMessage outputMessage) {
+        return new ServerHttpRequestDecorator(exchange.getRequest()) {
+            @Override
+            public HttpHeaders getHeaders() {
+                long contentLength = headers.getContentLength();
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.putAll(super.getHeaders());
+                if (contentLength &gt; 0L) {
+                    httpHeaders.setContentLength(contentLength);
+                } else {
+                    httpHeaders.set(&quot;Transfer-Encoding&quot;, &quot;chunked&quot;);
+                }
+
+                return httpHeaders;
+            }
+
+            @Override
+            public Flux&lt;DataBuffer&gt; getBody() {
+                return outputMessage.getBody();
+            }
+        };
+    }
+
+    /**
+     *校验请求的签名
+     *@author zhaobaolong
+     *@return
+     *@date 2020/3/12 14:50
+     * @param bodyMap
+     */
+    private boolean singValid(Map&lt;String, String&gt; bodyMap) {
+        String sign = bodyMap.get(ValidSignEnum.SIGN.getName());
+        if(StringUtils.isBlank(sign)){
+            return false;
+        }
+        String noceStr = bodyMap.get(ValidSignEnum.NOCESTR.getName());
+        if(StringUtils.isBlank(ValidSignEnum.NOCESTR.getName())){
+            return false;
+        }
+        RBucket&lt;String&gt; bucket = redissonClient.getBucket(RedisKeyEnum.GATEWAY_NOCESTR.getName() + noceStr);
+        if( bucket.isExists()){
+            return false;
+        }else{
+            bucket.set(System.currentTimeMillis()+&quot;&quot;,10, TimeUnit.SECONDS);
+        }
+        //去掉sign
+        Map&lt;String, String&gt; filterMap = bodyMap.entrySet().stream().filter(x -&gt; !ValidSignEnum.SIGN.getName().equals(x.getKey())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,(a,b)-&gt;a, TreeMap::new));
+        //将map转成key=value&amp;形式
+        String params = filterMap.entrySet().stream().map(e -&gt; e.getKey() + &quot;=&quot; + e.getValue()).collect(Collectors.joining(&quot;&amp;&quot;));
+        //生成服务端sign然后和传过来的比对
+        String serverSign = DigestUtils.md5DigestAsHex(params.getBytes());
+        return StringUtils.equals(sign, serverSign);
+    }
+
+    @Override
+    public List&lt;String&gt; shortcutFieldOrder() {
+        return Collections.singletonList(&quot;parts&quot;);
+    }
+
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+
+    public static class Config {
+        private int parts;
+
+        public Config() {
+        }
+
+        public int getParts() {
+            return this.parts;
+        }
+
+        public void setParts(int parts) {
+            this.parts = parts;
+        }
+    }
+}
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://zblzbl1991.github.io/post/springcloudgateway-shi-yong-sentinel-hou-zi-ding-yi-yi-chang-fan-hui/">
+              <h3 class="post-title">
+                SpringCloudGateway使用Sentinel后自定义异常返回
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+  <a class="rss" href="https://zblzbl1991.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

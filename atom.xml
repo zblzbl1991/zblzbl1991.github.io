@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://zblzbl1991.github.io</id>
     <title>Gridea</title>
-    <updated>2020-03-19T13:16:57.058Z</updated>
+    <updated>2020-03-21T03:31:55.612Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://zblzbl1991.github.io"/>
     <link rel="self" href="https://zblzbl1991.github.io/atom.xml"/>
@@ -11,6 +11,373 @@
     <icon>https://zblzbl1991.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, Gridea</rights>
     <entry>
+        <title type="html"><![CDATA[SpringCloudGateway获取请求参数]]></title>
+        <id>https://zblzbl1991.github.io/post/springcloudgateway-huo-qu-qing-qiu-can-shu/</id>
+        <link href="https://zblzbl1991.github.io/post/springcloudgateway-huo-qu-qing-qiu-can-shu/">
+        </link>
+        <updated>2020-03-21T03:28:01.000Z</updated>
+        <content type="html"><![CDATA[<p>最近需要在网关层做参数校验,碰到了一个很坑的东西,post请求获取body体的参数后,会出现各种问题,网上一大堆互相抄来抄去的所谓的&quot;解决方案&quot;,没一个是靠谱的,经过多方面的研究,参考官方提供的一个Filter<code>ModifyRequestBodyGatewayFilterFactory</code>,最后实现如下:</p>
+<pre><code class="language-java">/**
+ * @author zhaobaolong
+ * @date 2020/3/12 9:35
+ * @description 网关签名校验过滤器
+ */
+@Slf4j
+@Component
+public class SignValidGatewayFilterFactory extends AbstractGatewayFilterFactory&lt;SignValidGatewayFilterFactory.Config&gt;  implements Ordered {
+    public static final String PARTS_KEY = &quot;parts&quot;;
+    private static final String NOCESTR=&quot;nocestr&quot;;
+    private static final String TIMESTAMP=&quot;timestamp&quot;;
+    private final List&lt;HttpMessageReader&lt;?&gt;&gt; messageReaders;
+    @Autowired
+    ObjectMapper objectMapper ;
+
+    @Value(&quot;${spring.profiles.active}&quot;)
+    private String profile;
+
+    @Autowired
+    private RedissonClient redissonClient;
+
+    public SignValidGatewayFilterFactory() {
+        super(SignValidGatewayFilterFactory.Config.class);
+        this.messageReaders = HandlerStrategies.withDefaults().messageReaders();
+    }
+
+    @Override
+    public GatewayFilter apply(Config config) {
+        return (exchange, chain) -&gt; {
+            ServerRequest serverRequest = ServerRequest.create(exchange, SignValidGatewayFilterFactory.this.messageReaders);
+            HttpMethod method = exchange.getRequest().getMethod();
+
+            boolean swaggerFlag=signSwagger(exchange);
+            if(swaggerFlag){
+                return chain.filter(exchange);
+            }
+            if(method.compareTo(HttpMethod.GET)==0){
+                MultiValueMap&lt;String, String&gt; queryParams = exchange.getRequest().getQueryParams();
+                Map&lt;String, String&gt; stringStringMap = queryParams.toSingleValueMap();
+                boolean flag = singValid(stringStringMap);
+                if(!flag){
+                    return Mono.error(new ValidParameterFailException(&quot;无效参数&quot;));
+                }
+                return chain.filter(exchange);
+            }else if(method.compareTo(HttpMethod.POST)==0){
+                //mediaType
+                MediaType mediaType = exchange.getRequest().getHeaders().getContentType();
+                if (MediaType.APPLICATION_FORM_URLENCODED.isCompatibleWith(mediaType)) {
+                    //匹配form表单
+                    Mono&lt;String&gt; modifyMap = serverRequest.bodyToMono(String.class).flatMap(body -&gt; {
+                            Map&lt;String, String&gt; bodyMap = decodeFormBody(body);
+                        String string = JSON.toJSONString(bodyMap);
+                        log.info(string);
+                        boolean flag=   singValid(bodyMap);
+                        if(!flag){
+                           return Mono.error(new ValidParameterFailException(&quot;无效参数&quot;));
+                        }
+                        return Mono.just(encodeFormBody(bodyMap));
+                    });
+                    return rebuildBody(exchange, chain, modifyMap);
+                }else if(MediaType.APPLICATION_JSON_UTF8.isCompatibleWith(mediaType)||MediaType.APPLICATION_JSON_UTF8.isCompatibleWith(mediaType)){
+                    //如果是json格式
+                    Mono&lt;String&gt; modifyMap = serverRequest.bodyToMono(String.class).flatMap(body -&gt; {
+                        Map&lt;String, String&gt; bodyMap = decodeJsonBody(body);
+                        boolean flag = singValid(bodyMap);
+                        if(!flag){
+                            return Mono.error(new ValidParameterFailException(&quot;无效参数&quot;));
+                        }
+                        return Mono.just(encodeJsonBody(bodyMap));
+                    });
+                    return rebuildBody(exchange, chain, modifyMap);
+                }
+                else{
+                    return chain.filter(exchange);
+                }
+            }else{
+                return chain.filter(exchange);
+            }
+
+
+
+        };
+    }
+    /**
+     *判断是否是swagger查询
+     *@author zhaobaolong
+     *@param exchange
+     *@return
+     *@date 2020/3/20 9:20
+     */
+    private boolean signSwagger(ServerWebExchange exchange) {
+        //只有dev和测试环境才需要
+        if(&quot;dev&quot;.equals(profile)){
+            List&lt;String&gt; referer = exchange.getRequest().getHeaders().get(&quot;Referer&quot;);
+            String s = referer.get(0);
+            if(s.contains(&quot;swagger-ui.html&quot;)){
+                return true;
+            }
+            String rawPath = exchange.getRequest().getURI().getRawPath();
+            if(&quot;/v2/api-docs&quot;.equals(rawPath)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Mono&lt;Void&gt; rebuildBody(ServerWebExchange exchange, GatewayFilterChain chain, Mono&lt;String&gt; modifyMap) {
+        BodyInserter&lt;Mono&lt;String&gt;, ReactiveHttpOutputMessage&gt; bodyInserter = BodyInserters.fromPublisher(modifyMap, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.putAll(exchange.getRequest().getHeaders());
+        headers.remove(HttpHeaders.CONTENT_LENGTH);
+
+        CachedBodyOutputMessage outputMessage = new CachedBodyOutputMessage(exchange, headers);
+        return bodyInserter.insert(outputMessage,new BodyInserterContext()).then(Mono.defer(()-&gt;{
+            ServerHttpRequest decorator = SignValidGatewayFilterFactory.this.decorate(exchange, headers, outputMessage);
+            return chain.filter(exchange.mutate().request(decorator).build());
+        }));
+    }
+    /**
+     *将map转成form表单形式参数
+     *@author zhaobaolong
+     *@param map
+     *@return
+     *@date 2020/3/17 11:18
+     */
+    private String encodeFormBody(Map&lt;String, String&gt; map) {
+        return map.entrySet().stream().map(e-&gt;e.getKey()+&quot;=&quot;+e.getValue()).collect(Collectors.joining(&quot;&amp;&quot;));
+    }
+    /**
+     *将form表单形式参数转成map
+     *@author zhaobaolong
+     *@param body
+     *@return
+     *@date 2020/3/17 11:18
+     */
+    private Map&lt;String, String&gt; decodeFormBody(String body) {
+        return Arrays.stream(body.split(&quot;&amp;&quot;)).map(str-&gt;str.split(&quot;=&quot;)).collect(Collectors.toMap(arr-&gt;arr[0],arr-&gt;arr[1]));
+    }
+    /**
+     *将map转成json形式参数
+     *@author zhaobaolong
+     *@param map
+     *@return
+     *@date 2020/3/17 11:18
+     */
+    private String encodeJsonBody(Map&lt;String, String&gt; map) {
+
+        try {
+            return objectMapper.writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return Mono.empty().toString();
+        }
+
+    }
+    /**
+     *将json参数转成map
+     *@author zhaobaolong
+     *@param body
+     *@return
+     *@date 2020/3/17 11:18
+     */
+    private Map&lt;String, String&gt; decodeJsonBody(String body) {
+        HashMap hashMap =new HashMap();
+        try {
+            hashMap=  objectMapper.readValue(body, HashMap.class);
+            return hashMap;
+        } catch (IOException e) {
+            e.printStackTrace();
+           return hashMap;
+        }
+    }
+
+    ServerHttpRequestDecorator decorate(ServerWebExchange exchange, HttpHeaders headers, CachedBodyOutputMessage outputMessage) {
+        return new ServerHttpRequestDecorator(exchange.getRequest()) {
+            @Override
+            public HttpHeaders getHeaders() {
+                long contentLength = headers.getContentLength();
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.putAll(super.getHeaders());
+                if (contentLength &gt; 0L) {
+                    httpHeaders.setContentLength(contentLength);
+                } else {
+                    httpHeaders.set(&quot;Transfer-Encoding&quot;, &quot;chunked&quot;);
+                }
+
+                return httpHeaders;
+            }
+
+            @Override
+            public Flux&lt;DataBuffer&gt; getBody() {
+                return outputMessage.getBody();
+            }
+        };
+    }
+
+    /**
+     *校验请求的签名
+     *@author zhaobaolong
+     *@return
+     *@date 2020/3/12 14:50
+     * @param bodyMap
+     */
+    private boolean singValid(Map&lt;String, String&gt; bodyMap) {
+        String sign = bodyMap.get(ValidSignEnum.SIGN.getName());
+        if(StringUtils.isBlank(sign)){
+            return false;
+        }
+        String noceStr = bodyMap.get(ValidSignEnum.NOCESTR.getName());
+        if(StringUtils.isBlank(ValidSignEnum.NOCESTR.getName())){
+            return false;
+        }
+        RBucket&lt;String&gt; bucket = redissonClient.getBucket(RedisKeyEnum.GATEWAY_NOCESTR.getName() + noceStr);
+        if( bucket.isExists()){
+            return false;
+        }else{
+            bucket.set(System.currentTimeMillis()+&quot;&quot;,10, TimeUnit.SECONDS);
+        }
+        //去掉sign
+        Map&lt;String, String&gt; filterMap = bodyMap.entrySet().stream().filter(x -&gt; !ValidSignEnum.SIGN.getName().equals(x.getKey())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,(a,b)-&gt;a, TreeMap::new));
+        //将map转成key=value&amp;形式
+        String params = filterMap.entrySet().stream().map(e -&gt; e.getKey() + &quot;=&quot; + e.getValue()).collect(Collectors.joining(&quot;&amp;&quot;));
+        //生成服务端sign然后和传过来的比对
+        String serverSign = DigestUtils.md5DigestAsHex(params.getBytes());
+        return StringUtils.equals(sign, serverSign);
+    }
+
+    @Override
+    public List&lt;String&gt; shortcutFieldOrder() {
+        return Collections.singletonList(&quot;parts&quot;);
+    }
+
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+
+    public static class Config {
+        private int parts;
+
+        public Config() {
+        }
+
+        public int getParts() {
+            return this.parts;
+        }
+
+        public void setParts(int parts) {
+            this.parts = parts;
+        }
+    }
+}
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[SpringCloudGateway使用Sentinel后自定义异常返回]]></title>
+        <id>https://zblzbl1991.github.io/post/springcloudgateway-shi-yong-sentinel-hou-zi-ding-yi-yi-chang-fan-hui/</id>
+        <link href="https://zblzbl1991.github.io/post/springcloudgateway-shi-yong-sentinel-hou-zi-ding-yi-yi-chang-fan-hui/">
+        </link>
+        <updated>2020-03-21T03:19:33.000Z</updated>
+        <content type="html"><![CDATA[<p>在使用<code>Sentinel</code>做服务降级的时候,如果使用默认异常返回,会抛出<code>BlockException</code>,这个明显不够优雅,为了优雅的返回错误提示,我们需要自己定义异常返回,实现方法如下:</p>
+<pre><code class="language-java">/**
+ * @author zhaobaolong
+ * @date 2020/3/9 17:53
+ * @description 自定义的返回
+ */
+public class SentinelExtendsHandler implements WebExceptionHandler {
+    private List&lt;ViewResolver&gt; viewResolvers;
+    private List&lt;HttpMessageWriter&lt;?&gt;&gt; messageWriters;
+    private final Supplier&lt;ServerResponse.Context&gt; contextSupplier = () -&gt; new ServerResponse.Context() {
+        @Override
+        public List&lt;HttpMessageWriter&lt;?&gt;&gt; messageWriters() {
+            return SentinelExtendsHandler.this.messageWriters;
+        }
+
+        @Override
+        public List&lt;ViewResolver&gt; viewResolvers() {
+            return SentinelExtendsHandler.this.viewResolvers;
+        }
+    };
+
+    public SentinelExtendsHandler(List&lt;ViewResolver&gt; viewResolvers, ServerCodecConfigurer serverCodecConfigurer) {
+        this.viewResolvers = viewResolvers;
+        this.messageWriters = serverCodecConfigurer.getWriters();
+    }
+
+    private Mono&lt;Void&gt; writeResponse(ServerResponse response, ServerWebExchange exchange, Throwable ex) {
+        ServerHttpResponse serverHttpResponse = exchange.getResponse();
+        Response&lt;String&gt; stringResponse = new Response&lt;&gt;();
+        //Response这个类是我自己定义的一个用于处理返回值的实体类,你可以自己写一个
+        if(BlockException.isBlockException(ex)){
+            //设置超时错误码
+            serverBusyResponse(serverHttpResponse, stringResponse);
+        }else if(ex instanceof ValidParameterFailException){
+            //设置参数校验错误码
+            serverHttpResponse.setStatusCode(HttpStatus.UNAUTHORIZED);
+            serverHttpResponse.getHeaders().setContentType(MediaType.APPLICATION_JSON_UTF8);
+            stringResponse.setCode(Reasons.FAIL_TO_SIGN_LOCAL.getCode());
+            stringResponse.setMsg(Reasons.FAIL_TO_SIGN_LOCAL.getDescription());
+        }else{
+            serverBusyResponse(serverHttpResponse, stringResponse);
+        }
+
+        byte[] datas = JSON.toJSONString(stringResponse).getBytes(StandardCharsets.UTF_8);
+        DataBuffer wrap = serverHttpResponse.bufferFactory().wrap(datas);
+        return serverHttpResponse.writeWith(Mono.just(wrap));
+    }
+
+    private void serverBusyResponse(ServerHttpResponse serverHttpResponse, Response&lt;String&gt; stringResponse) {
+        serverHttpResponse.setStatusCode(HttpStatus.GATEWAY_TIMEOUT);
+        serverHttpResponse.getHeaders().setContentType(MediaType.APPLICATION_JSON_UTF8);
+        stringResponse.setCode(Reasons.SERVICE_BUSY.code);
+        stringResponse.setMsg(Reasons.SERVICE_BUSY.description);
+    }
+
+    @Override
+    public Mono&lt;Void&gt; handle(ServerWebExchange exchange, Throwable ex) {
+        if (exchange.getResponse().isCommitted()) {
+            return Mono.error(ex);
+        } else {
+//            return !BlockException.isBlockException(ex) ? Mono.error(ex) : this.handleBlockedRequest(exchange, ex).flatMap((response) -&gt; this.writeResponse(response, exchange));
+            return this.handleBlockedRequest(exchange, ex).flatMap((response) -&gt; this.writeResponse(response, exchange,ex));
+        }
+    }
+
+    private Mono&lt;ServerResponse&gt; handleBlockedRequest(ServerWebExchange exchange, Throwable throwable) {
+        return GatewayCallbackManager.getBlockHandler().handleRequest(exchange, throwable);
+    }
+}
+</code></pre>
+<p>当然你还需要自己实现<code>SentinelExtendsHandler</code></p>
+<pre><code class="language-java">/**
+ * @author zhaobaolong
+ * @date 2020/3/9 17:35
+ * @description sentinel熔断配置
+ */
+@Configuration
+public class SentinelFallbackConfig {
+    private ServerCodecConfigurer serverCodecConfigurer;
+
+    private List&lt;ViewResolver&gt; viewResolvers;
+
+   public SentinelFallbackConfig(ObjectProvider&lt;List&lt;ViewResolver&gt;&gt; viewResolverProvider, ServerCodecConfigurer serverCodecConfigurer){
+       this.viewResolvers=viewResolverProvider.getIfAvailable(Collections::emptyList);
+       this.serverCodecConfigurer=serverCodecConfigurer;
+   }
+
+   @Bean
+   @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SentinelExtendsHandler sentinelExtendsHandler(){
+       return new SentinelExtendsHandler(viewResolvers,serverCodecConfigurer);
+   }
+
+
+}
+
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
         <title type="html"><![CDATA[SpringCloudGateway使用nacos实现动态路由]]></title>
         <id>https://zblzbl1991.github.io/post/springcloudgateway-shi-yong-nacos-shi-xian-dong-tai-lu-you/</id>
         <link href="https://zblzbl1991.github.io/post/springcloudgateway-shi-yong-nacos-shi-xian-dong-tai-lu-you/">
@@ -18,7 +385,7 @@
         <updated>2020-03-18T13:14:54.000Z</updated>
         <content type="html"><![CDATA[<p><em>版本</em>  Greenwich.SR5</p>
 <p>我实现动态路由的方案是<br>
-使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化</p>
+使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化,然后使用nacos配置中心监听指定<code>dataId</code>的配置改变,然后使用<code>routeDefinitionWriter</code>更新路由信息,接着使用<code>applicationEventPublisher</code>立即刷新当前路由信息,如果不执行<code>applicationEventPublisher.publishEvent</code>的话,路由不会自动更新.</p>
 <pre><code class="language-java">@Configuration
 @RefreshScope
 public class DynamicRoutingConfig implements ApplicationEventPublisherAware {

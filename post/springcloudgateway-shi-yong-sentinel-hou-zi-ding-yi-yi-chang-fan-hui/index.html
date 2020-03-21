@@ -1,0 +1,264 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SpringCloudGateway使用Sentinel后自定义异常返回 | Gridea</title>
+<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1584761432495">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="SpringCloudGateway使用Sentinel后自定义异常返回 | Gridea - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="在使用Sentinel做服务降级的时候,如果使用默认异常返回,会抛出BlockException,这个明显不够优雅,为了优雅的返回错误提示,我们需要自己定义异常返回,实现方法如下:
+/**
+ * @author zhaobaolong
+ *..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://zblzbl1991.github.io">
+  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1584761432495" alt="">
+  </a>
+  <h1 class="site-title">
+    Gridea
+  </h1>
+  <p class="site-description">
+    温故而知新
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              SpringCloudGateway使用Sentinel后自定义异常返回
+            </h2>
+            <div class="post-info">
+              <span>
+                2020-03-21
+              </span>
+              <span>
+                3 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>在使用<code>Sentinel</code>做服务降级的时候,如果使用默认异常返回,会抛出<code>BlockException</code>,这个明显不够优雅,为了优雅的返回错误提示,我们需要自己定义异常返回,实现方法如下:</p>
+<pre><code class="language-java">/**
+ * @author zhaobaolong
+ * @date 2020/3/9 17:53
+ * @description 自定义的返回
+ */
+public class SentinelExtendsHandler implements WebExceptionHandler {
+    private List&lt;ViewResolver&gt; viewResolvers;
+    private List&lt;HttpMessageWriter&lt;?&gt;&gt; messageWriters;
+    private final Supplier&lt;ServerResponse.Context&gt; contextSupplier = () -&gt; new ServerResponse.Context() {
+        @Override
+        public List&lt;HttpMessageWriter&lt;?&gt;&gt; messageWriters() {
+            return SentinelExtendsHandler.this.messageWriters;
+        }
+
+        @Override
+        public List&lt;ViewResolver&gt; viewResolvers() {
+            return SentinelExtendsHandler.this.viewResolvers;
+        }
+    };
+
+    public SentinelExtendsHandler(List&lt;ViewResolver&gt; viewResolvers, ServerCodecConfigurer serverCodecConfigurer) {
+        this.viewResolvers = viewResolvers;
+        this.messageWriters = serverCodecConfigurer.getWriters();
+    }
+
+    private Mono&lt;Void&gt; writeResponse(ServerResponse response, ServerWebExchange exchange, Throwable ex) {
+        ServerHttpResponse serverHttpResponse = exchange.getResponse();
+        Response&lt;String&gt; stringResponse = new Response&lt;&gt;();
+        //Response这个类是我自己定义的一个用于处理返回值的实体类,你可以自己写一个
+        if(BlockException.isBlockException(ex)){
+            //设置超时错误码
+            serverBusyResponse(serverHttpResponse, stringResponse);
+        }else if(ex instanceof ValidParameterFailException){
+            //设置参数校验错误码
+            serverHttpResponse.setStatusCode(HttpStatus.UNAUTHORIZED);
+            serverHttpResponse.getHeaders().setContentType(MediaType.APPLICATION_JSON_UTF8);
+            stringResponse.setCode(Reasons.FAIL_TO_SIGN_LOCAL.getCode());
+            stringResponse.setMsg(Reasons.FAIL_TO_SIGN_LOCAL.getDescription());
+        }else{
+            serverBusyResponse(serverHttpResponse, stringResponse);
+        }
+
+        byte[] datas = JSON.toJSONString(stringResponse).getBytes(StandardCharsets.UTF_8);
+        DataBuffer wrap = serverHttpResponse.bufferFactory().wrap(datas);
+        return serverHttpResponse.writeWith(Mono.just(wrap));
+    }
+
+    private void serverBusyResponse(ServerHttpResponse serverHttpResponse, Response&lt;String&gt; stringResponse) {
+        serverHttpResponse.setStatusCode(HttpStatus.GATEWAY_TIMEOUT);
+        serverHttpResponse.getHeaders().setContentType(MediaType.APPLICATION_JSON_UTF8);
+        stringResponse.setCode(Reasons.SERVICE_BUSY.code);
+        stringResponse.setMsg(Reasons.SERVICE_BUSY.description);
+    }
+
+    @Override
+    public Mono&lt;Void&gt; handle(ServerWebExchange exchange, Throwable ex) {
+        if (exchange.getResponse().isCommitted()) {
+            return Mono.error(ex);
+        } else {
+//            return !BlockException.isBlockException(ex) ? Mono.error(ex) : this.handleBlockedRequest(exchange, ex).flatMap((response) -&gt; this.writeResponse(response, exchange));
+            return this.handleBlockedRequest(exchange, ex).flatMap((response) -&gt; this.writeResponse(response, exchange,ex));
+        }
+    }
+
+    private Mono&lt;ServerResponse&gt; handleBlockedRequest(ServerWebExchange exchange, Throwable throwable) {
+        return GatewayCallbackManager.getBlockHandler().handleRequest(exchange, throwable);
+    }
+}
+</code></pre>
+<p>当然你还需要自己实现<code>SentinelExtendsHandler</code></p>
+<pre><code class="language-java">/**
+ * @author zhaobaolong
+ * @date 2020/3/9 17:35
+ * @description sentinel熔断配置
+ */
+@Configuration
+public class SentinelFallbackConfig {
+    private ServerCodecConfigurer serverCodecConfigurer;
+
+    private List&lt;ViewResolver&gt; viewResolvers;
+
+   public SentinelFallbackConfig(ObjectProvider&lt;List&lt;ViewResolver&gt;&gt; viewResolverProvider, ServerCodecConfigurer serverCodecConfigurer){
+       this.viewResolvers=viewResolverProvider.getIfAvailable(Collections::emptyList);
+       this.serverCodecConfigurer=serverCodecConfigurer;
+   }
+
+   @Bean
+   @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SentinelExtendsHandler sentinelExtendsHandler(){
+       return new SentinelExtendsHandler(viewResolvers,serverCodecConfigurer);
+   }
+
+
+}
+
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://zblzbl1991.github.io/post/springcloudgateway-shi-yong-nacos-shi-xian-dong-tai-lu-you/">
+              <h3 class="post-title">
+                SpringCloudGateway使用nacos实现动态路由
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+  <a class="rss" href="https://zblzbl1991.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

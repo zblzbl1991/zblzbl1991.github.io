@@ -3,7 +3,7 @@
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SpringCloudGateway使用nacos实现动态路由 | Gridea</title>
-<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1584623809929">
+<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1584761432495">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
 <link rel="alternate" type="application/atom+xml" title="SpringCloudGateway使用nacos实现动态路由 | Gridea - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
@@ -13,8 +13,7 @@
 
     <meta name="description" content="版本  Greenwich.SR5
 我实现动态路由的方案是
-使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化
-@Configu..." />
+使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化,然后使用naco..." />
     <meta name="keywords" content="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
@@ -24,7 +23,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://zblzbl1991.github.io">
-  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1584623809929" alt="">
+  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1584761432495" alt="">
   </a>
   <h1 class="site-title">
     Gridea
@@ -84,7 +83,7 @@
                 2020-03-18
               </span>
               <span>
-                3 min read
+                4 min read
               </span>
               
             </div>
@@ -93,7 +92,7 @@
               <div class="post-content">
                 <p><em>版本</em>  Greenwich.SR5</p>
 <p>我实现动态路由的方案是<br>
-使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化</p>
+使用nacos做注册中心,然后将路由配置作为json数据放在nacos上面,代码如下,我这里不在配置里写路由,全都放在配置中心上,初始的时候先获取一次来进行初始化,然后使用nacos配置中心监听指定<code>dataId</code>的配置改变,然后使用<code>routeDefinitionWriter</code>更新路由信息,接着使用<code>applicationEventPublisher</code>立即刷新当前路由信息,如果不执行<code>applicationEventPublisher.publishEvent</code>的话,路由不会自动更新.</p>
 <pre><code class="language-java">@Configuration
 @RefreshScope
 public class DynamicRoutingConfig implements ApplicationEventPublisherAware {
