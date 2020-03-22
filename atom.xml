@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://zblzbl1991.github.io</id>
     <title>笨猪的窝</title>
-    <updated>2020-03-22T03:59:23.671Z</updated>
+    <updated>2020-03-22T04:17:33.119Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://zblzbl1991.github.io"/>
     <link rel="self" href="https://zblzbl1991.github.io/atom.xml"/>
@@ -10,6 +10,19 @@
     <logo>https://zblzbl1991.github.io/images/avatar.png</logo>
     <icon>https://zblzbl1991.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, 笨猪的窝</rights>
+    <entry>
+        <title type="html"><![CDATA[SpringCloud使用Feign遇到的坑]]></title>
+        <id>https://zblzbl1991.github.io/post/springcloud-shi-yong-feign-yu-dao-de-keng/</id>
+        <link href="https://zblzbl1991.github.io/post/springcloud-shi-yong-feign-yu-dao-de-keng/">
+        </link>
+        <updated>2020-03-22T04:06:53.000Z</updated>
+        <content type="html"><![CDATA[<p>之前使用feign做远程调用的时候碰到一个坑,<code>GET</code>请求不能直接传实体类,经过研究发现,必须要引入<code>openfeign-http</code>,<code>http-client</code>这两个组件,使feign支持<code>apache httpclient</code>.<br>
+否则默认使用<code>jdk的httpclient,</code>这样在传输的时候如果是实体类,就会转成<code>POST</code>请求,之后按照教程这样修改后,可以正常传递实体类了,但是又出现了另一个问题了,那就是接收端必须要加上<code>@RequestBody</code>,使用json格式来接收,<code>GET</code>请求从body里取出json格式的参数,看起来很怪,因为通常都是在'POST'请求中从body取出参数这样来操作的,<code>GET</code>请求一般是在url后面来获取参数<br>
+那么<code>GET</code>请求有body吗?显然是有的,但是如果使用老版本的Postman,等工具是无法在<code>GET</code>请求的时候传递body的,因为HTTP协议的规范中并不支持这样做,从而引申出来的一个问题:<code>GET</code>请求和<code>POST</code>请求到底有什么区别?<br>
+我个人理解:就是对请求协议的格式规范作用<br>
+值得一提的是,<code>SpringBoot2.1</code>之后 <code>Feign</code>可以使用<code>@SpringQueryMap</code>来支持<code>GET</code>请求传递实体类了, 可以更加简单的使用<code>Feign</code>了!</p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[SpringBoot2.X中校验变量的方法]]></title>
         <id>https://zblzbl1991.github.io/post/springboot2x-zhong-xiao-yan-bian-liang-de-fang-fa/</id>

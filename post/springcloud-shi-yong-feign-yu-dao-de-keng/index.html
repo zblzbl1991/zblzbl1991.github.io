@@ -2,18 +2,17 @@
   <head>
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SpringBoot2.X中校验变量的方法 | 笨猪的窝</title>
+<title>SpringCloud使用Feign遇到的坑 | 笨猪的窝</title>
 <link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1584850646164">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="SpringBoot2.X中校验变量的方法 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="alternate" type="application/atom+xml" title="SpringCloud使用Feign遇到的坑 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="通常我们会在Controller里使用@Valid/@Validated等注解加载参数上,如这种:
-	@PostMapping(&quot;hello3&quot;)
-	public String hello3(@Validated @Re..." />
+    <meta name="description" content="之前使用feign做远程调用的时候碰到一个坑,GET请求不能直接传实体类,经过研究发现,必须要引入openfeign-http,http-client这两个组件,使feign支持apache httpclient.
+否则默认使用jdk的ht..." />
     <meta name="keywords" content="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
@@ -76,46 +75,25 @@
         <div class="post-detail">
           <article class="post">
             <h2 class="post-title">
-              SpringBoot2.X中校验变量的方法
+              SpringCloud使用Feign遇到的坑
             </h2>
             <div class="post-info">
               <span>
                 2020-03-22
               </span>
               <span>
-                1 min read
+                2 min read
               </span>
               
             </div>
             
             <div class="post-content-wrapper">
               <div class="post-content">
-                <p>通常我们会在Controller里使用<code>@Valid/@Validated</code>等注解加载参数上,如这种:</p>
-<pre><code class="language-java">	@PostMapping(&quot;hello3&quot;)
-	public String hello3(@Validated @RequestBody JSONObject jsonObject) throws ApplicationException {
-		throw ApplicationException.instance(Reasons.REMOTE_PROCEDURE_CALL_TIME_OUT);
-	}
-</code></pre>
-<p>然后实体类上使用诸如<code>@NotNull,@NotBlank,@MaxLength</code>等注解,这样在客户端请求的时候就会自动进行校验(更多用法自行查找),但是如果想要手动校验呢?这个时候我们可以这样:<br>
-自动注入<code>Validator</code>,如下</p>
-<pre><code class="language-java">@SpringBootTest(classes = DemoApplication.class)
-@RunWith(SpringRunner.class)
-//@WebAppConfiguration
-public class HelloTest {
-	@Autowired
-	private Validator validate;
-	@Test
-	public void test(){
-		User user = new User();
-		Set&lt;ConstraintViolation&lt;User&gt;&gt; validate = this.validate.validate(user);
-		validate.size();
-		for (ConstraintViolation&lt;User&gt; userConstraintViolation : validate) {
-			String message = userConstraintViolation.getMessage();
-			System.out.println(message);
-		}
-	}
-}
-</code></pre>
+                <p>之前使用feign做远程调用的时候碰到一个坑,<code>GET</code>请求不能直接传实体类,经过研究发现,必须要引入<code>openfeign-http</code>,<code>http-client</code>这两个组件,使feign支持<code>apache httpclient</code>.<br>
+否则默认使用<code>jdk的httpclient,</code>这样在传输的时候如果是实体类,就会转成<code>POST</code>请求,之后按照教程这样修改后,可以正常传递实体类了,但是又出现了另一个问题了,那就是接收端必须要加上<code>@RequestBody</code>,使用json格式来接收,<code>GET</code>请求从body里取出json格式的参数,看起来很怪,因为通常都是在'POST'请求中从body取出参数这样来操作的,<code>GET</code>请求一般是在url后面来获取参数<br>
+那么<code>GET</code>请求有body吗?显然是有的,但是如果使用老版本的Postman,等工具是无法在<code>GET</code>请求的时候传递body的,因为HTTP协议的规范中并不支持这样做,从而引申出来的一个问题:<code>GET</code>请求和<code>POST</code>请求到底有什么区别?<br>
+我个人理解:就是对请求协议的格式规范作用<br>
+值得一提的是,<code>SpringBoot2.1</code>之后 <code>Feign</code>可以使用<code>@SpringQueryMap</code>来支持<code>GET</code>请求传递实体类了, 可以更加简单的使用<code>Feign</code>了!</p>
 
               </div>
               <div class="toc-container">
@@ -128,9 +106,9 @@ public class HelloTest {
         
           <div class="next-post">
             <div class="next">下一篇</div>
-            <a href="https://zblzbl1991.github.io/post/springcloudgateway-huo-qu-qing-qiu-can-shu/">
+            <a href="https://zblzbl1991.github.io/post/springboot2x-zhong-xiao-yan-bian-liang-de-fang-fa/">
               <h3 class="post-title">
-                SpringCloudGateway获取请求参数
+                SpringBoot2.X中校验变量的方法
               </h3>
             </a>
           </div>
