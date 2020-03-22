@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://zblzbl1991.github.io</id>
     <title>笨猪的窝</title>
-    <updated>2020-03-22T04:46:31.397Z</updated>
+    <updated>2020-03-22T07:37:35.043Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://zblzbl1991.github.io"/>
     <link rel="self" href="https://zblzbl1991.github.io/atom.xml"/>
@@ -10,6 +10,39 @@
     <logo>https://zblzbl1991.github.io/images/avatar.png</logo>
     <icon>https://zblzbl1991.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, 笨猪的窝</rights>
+    <entry>
+        <title type="html"><![CDATA[Netty相关的学习]]></title>
+        <id>https://zblzbl1991.github.io/post/netty-xiang-guan-de-xue-xi/</id>
+        <link href="https://zblzbl1991.github.io/post/netty-xiang-guan-de-xue-xi/">
+        </link>
+        <updated>2020-03-22T05:48:47.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="nio">NIO</h1>
+<ul>
+<li>
+<h1 id="selector">selector</h1>
+</li>
+</ul>
+<p>接收到事件后切换到对应channel的选择器</p>
+<ul>
+<li>
+<h1 id="channel">channel</h1>
+</li>
+</ul>
+<p>对buffer进行读取的通道</p>
+<ul>
+<li>
+<h1 id="buffer">buffer</h1>
+</li>
+</ul>
+<p>读写数据的容器,有几个参数比较关键:</p>
+<ol>
+<li>limit : 最大长度</li>
+<li>capacity : 容器的容量</li>
+<li>position : 指针位置</li>
+<li>mark : 标记</li>
+</ol>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[SpringCloud使用Feign遇到的坑]]></title>
         <id>https://zblzbl1991.github.io/post/springcloud-shi-yong-feign-yu-dao-de-keng/</id>

@@ -2,27 +2,37 @@
   <head>
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>关于 | 笨猪的窝</title>
+<title>Netty相关的学习 | 笨猪的窝</title>
 <link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1584862637886">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="关于 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="alternate" type="application/atom+xml" title="Netty相关的学习 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="
-欢迎来到我的小站呀，很高兴遇见你！🤝
+    <meta name="description" content="NIO
 
-🏠 关于本站
-一个用于记录平常在网上查找很久才解决的问题的地方
-👨‍💻 博主是谁
-一个编程爱好者
-⛹ 兴趣爱好
-玩游戏,编程
-📬 联系我呀
-357760876@qq.com
-..." />
+
+selector
+
+
+接收到事件后切换到对应channel的选择器
+
+
+channel
+
+
+对buffer进行读取的通道
+
+
+buffer
+
+
+读写数据的容器,有几个参数比较关键:
+
+limit : 最大长度
+capacity ..." />
     <meta name="keywords" content="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
@@ -85,11 +95,11 @@
         <div class="post-detail">
           <article class="post">
             <h2 class="post-title">
-              关于
+              Netty相关的学习
             </h2>
             <div class="post-info">
               <span>
-                2019-01-25
+                2020-03-22
               </span>
               <span>
                 1 min read
@@ -99,29 +109,39 @@
             
             <div class="post-content-wrapper">
               <div class="post-content">
-                <blockquote>
-<p>欢迎来到我的小站呀，很高兴遇见你！🤝</p>
-</blockquote>
-<h2 id="关于本站">🏠 关于本站</h2>
-<p>一个用于记录平常在网上查找很久才解决的问题的地方</p>
-<h2 id="博主是谁">👨‍💻 博主是谁</h2>
-<p>一个编程爱好者</p>
-<h2 id="兴趣爱好">⛹ 兴趣爱好</h2>
-<p>玩游戏,编程</p>
-<h2 id="联系我呀">📬 联系我呀</h2>
-<p>357760876@qq.com</p>
+                <h1 id="nio">NIO</h1>
+<ul>
+<li>
+<h1 id="selector">selector</h1>
+</li>
+</ul>
+<p>接收到事件后切换到对应channel的选择器</p>
+<ul>
+<li>
+<h1 id="channel">channel</h1>
+</li>
+</ul>
+<p>对buffer进行读取的通道</p>
+<ul>
+<li>
+<h1 id="buffer">buffer</h1>
+</li>
+</ul>
+<p>读写数据的容器,有几个参数比较关键:</p>
+<ol>
+<li>limit : 最大长度</li>
+<li>capacity : 容器的容量</li>
+<li>position : 指针位置</li>
+<li>mark : 标记</li>
+</ol>
 
               </div>
               <div class="toc-container">
                 <ul class="markdownIt-TOC">
-<li>
-<ul>
-<li><a href="#%E5%85%B3%E4%BA%8E%E6%9C%AC%E7%AB%99">🏠 关于本站</a></li>
-<li><a href="#%E5%8D%9A%E4%B8%BB%E6%98%AF%E8%B0%81">👨‍💻 博主是谁</a></li>
-<li><a href="#%E5%85%B4%E8%B6%A3%E7%88%B1%E5%A5%BD">⛹ 兴趣爱好</a></li>
-<li><a href="#%E8%81%94%E7%B3%BB%E6%88%91%E5%91%80">📬 联系我呀</a></li>
-</ul>
-</li>
+<li><a href="#nio">NIO</a></li>
+<li><a href="#selector">selector</a></li>
+<li><a href="#channel">channel</a></li>
+<li><a href="#buffer">buffer</a></li>
 </ul>
 
               </div>
@@ -129,6 +149,15 @@
           </article>
         </div>
 
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://zblzbl1991.github.io/post/springcloud-shi-yong-feign-yu-dao-de-keng/">
+              <h3 class="post-title">
+                SpringCloud使用Feign遇到的坑
+              </h3>
+            </a>
+          </div>
         
 
         
