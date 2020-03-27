@@ -3,7 +3,7 @@
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Netty相关的学习 | 笨猪的窝</title>
-<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1585299873924">
+<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1585300378589">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
 <link rel="alternate" type="application/atom+xml" title="Netty相关的学习 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
@@ -42,7 +42,7 @@ capacity ..." />
       <div class="main-content">
         <div class="site-header">
   <a href="https://zblzbl1991.github.io">
-  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1585299873924" alt="">
+  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1585300378589" alt="">
   </a>
   <h1 class="site-title">
     笨猪的窝
@@ -102,7 +102,7 @@ capacity ..." />
                 2020-03-22
               </span>
               <span>
-                1 min read
+                2 min read
               </span>
               
             </div>
@@ -134,6 +134,64 @@ capacity ..." />
 <li>position : 指针位置</li>
 <li>mark : 标记</li>
 </ol>
+<h1 id="一个socketserverchannel实例">一个SocketServerChannel实例</h1>
+<pre><code class="language-java">		//开启ServerSocketChannel
+  	ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+  	serverSocketChannel.socket().bind(new InetSocketAddress(&quot;127.0.0.1&quot;, 6666));
+  	//设置非阻塞
+
+  	serverSocketChannel.configureBlocking(false);
+  	//开启selector
+  	Selector selector = Selector.open();
+  	//将selector注册到server上
+  	serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+  	while (true) {
+  		if (selector.select(1000) == 0) {
+  			System.out.println(&quot;1秒内没有获取到客户端连接&quot;);
+  			continue;
+  		}
+  		Set&lt;SelectionKey&gt; selectionKeys = selector.selectedKeys();
+  		Iterator&lt;SelectionKey&gt; iterator = selectionKeys.iterator();
+  		while (iterator.hasNext()) {
+  			SelectionKey key = iterator.next();
+  			if (key.isAcceptable()) {
+  				//如果是accept,生成一个channel
+  				SocketChannel socketChannel = serverSocketChannel.accept();
+
+  				System.out.println(&quot;客户端连接成功,socketchannel&quot; + socketChannel.hashCode());
+  				socketChannel.configureBlocking(false);
+  				//注册read事件到selector上
+  				socketChannel.register(selector, SelectionKey.OP_READ, ByteBuffer.allocate(1024));
+  			}
+  			if (key.isReadable()) {
+  				SocketChannel channel = (SocketChannel) key.channel();
+  				ByteBuffer attachment = (ByteBuffer) key.attachment();
+  				channel.read(attachment);
+  				System.out.println(new String(attachment.array()));
+  			}
+  			iterator.remove();
+
+  		}
+  	}
+  }
+</code></pre>
+<h1 id="一个socketclienchannel实例">一个SocketClienChannel实例</h1>
+<pre><code class="language-java">	SocketChannel socketChannel = SocketChannel.open();
+
+  	socketChannel.configureBlocking(false);
+  	if(!socketChannel.connect(new InetSocketAddress(&quot;127.0.0.1&quot;,6666))){
+//			boolean connected = socketChannel.isConnected();
+//			System.out.println(&quot;connected:&quot;+connected);
+  		while(!socketChannel.finishConnect()){
+  			System.out.println(&quot;建立连接中...&quot;);
+  		}
+  	}
+
+  	String str=&quot;test.........&quot;;
+  	ByteBuffer wrap = ByteBuffer.wrap(str.getBytes());
+  	socketChannel.write(wrap);
+  	System.in.read();
+</code></pre>
 
               </div>
               <div class="toc-container">
@@ -142,6 +200,8 @@ capacity ..." />
 <li><a href="#selector">selector</a></li>
 <li><a href="#channel">channel</a></li>
 <li><a href="#buffer">buffer</a></li>
+<li><a href="#%E4%B8%80%E4%B8%AAsocketserverchannel%E5%AE%9E%E4%BE%8B">一个SocketServerChannel实例</a></li>
+<li><a href="#%E4%B8%80%E4%B8%AAsocketclienchannel%E5%AE%9E%E4%BE%8B">一个SocketClienChannel实例</a></li>
 </ul>
 
               </div>

@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://zblzbl1991.github.io</id>
     <title>笨猪的窝</title>
-    <updated>2020-03-27T09:04:38.498Z</updated>
+    <updated>2020-03-27T09:13:08.513Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://zblzbl1991.github.io"/>
     <link rel="self" href="https://zblzbl1991.github.io/atom.xml"/>
@@ -86,6 +86,64 @@
 <li>position : 指针位置</li>
 <li>mark : 标记</li>
 </ol>
+<h1 id="一个socketserverchannel实例">一个SocketServerChannel实例</h1>
+<pre><code class="language-java">		//开启ServerSocketChannel
+  	ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+  	serverSocketChannel.socket().bind(new InetSocketAddress(&quot;127.0.0.1&quot;, 6666));
+  	//设置非阻塞
+
+  	serverSocketChannel.configureBlocking(false);
+  	//开启selector
+  	Selector selector = Selector.open();
+  	//将selector注册到server上
+  	serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+  	while (true) {
+  		if (selector.select(1000) == 0) {
+  			System.out.println(&quot;1秒内没有获取到客户端连接&quot;);
+  			continue;
+  		}
+  		Set&lt;SelectionKey&gt; selectionKeys = selector.selectedKeys();
+  		Iterator&lt;SelectionKey&gt; iterator = selectionKeys.iterator();
+  		while (iterator.hasNext()) {
+  			SelectionKey key = iterator.next();
+  			if (key.isAcceptable()) {
+  				//如果是accept,生成一个channel
+  				SocketChannel socketChannel = serverSocketChannel.accept();
+
+  				System.out.println(&quot;客户端连接成功,socketchannel&quot; + socketChannel.hashCode());
+  				socketChannel.configureBlocking(false);
+  				//注册read事件到selector上
+  				socketChannel.register(selector, SelectionKey.OP_READ, ByteBuffer.allocate(1024));
+  			}
+  			if (key.isReadable()) {
+  				SocketChannel channel = (SocketChannel) key.channel();
+  				ByteBuffer attachment = (ByteBuffer) key.attachment();
+  				channel.read(attachment);
+  				System.out.println(new String(attachment.array()));
+  			}
+  			iterator.remove();
+
+  		}
+  	}
+  }
+</code></pre>
+<h1 id="一个socketclienchannel实例">一个SocketClienChannel实例</h1>
+<pre><code class="language-java">	SocketChannel socketChannel = SocketChannel.open();
+
+  	socketChannel.configureBlocking(false);
+  	if(!socketChannel.connect(new InetSocketAddress(&quot;127.0.0.1&quot;,6666))){
+//			boolean connected = socketChannel.isConnected();
+//			System.out.println(&quot;connected:&quot;+connected);
+  		while(!socketChannel.finishConnect()){
+  			System.out.println(&quot;建立连接中...&quot;);
+  		}
+  	}
+
+  	String str=&quot;test.........&quot;;
+  	ByteBuffer wrap = ByteBuffer.wrap(str.getBytes());
+  	socketChannel.write(wrap);
+  	System.in.read();
+</code></pre>
 ]]></content>
     </entry>
     <entry>
