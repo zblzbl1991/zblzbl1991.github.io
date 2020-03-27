@@ -2,37 +2,18 @@
   <head>
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Netty相关的学习 | 笨猪的窝</title>
+<title>SpringBoot整合Netty碰到的一个坑 | 笨猪的窝</title>
 <link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1585299873924">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="Netty相关的学习 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="alternate" type="application/atom+xml" title="SpringBoot整合Netty碰到的一个坑 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="NIO
+    <meta name="description" content="这两天碰到一个坑,在整合了SpringBoot+Netty的服务想启用自动刷新配置,于是乎添加注解@RefreshScope,结果神奇的事情发生了,bean没有更新配置,经过不断的尝试,最后发现了导致这种情况的问题
 
-
-selector
-
-
-接收到事件后切换到对应channel的选择器
-
-
-channel
-
-
-对buffer进行读取的通道
-
-
-buffer
-
-
-读写数据的容器,有几个参数比较关键:
-
-limit : 最大长度
-capacity ..." />
+第一个问题,就是我为了..." />
     <meta name="keywords" content="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
@@ -95,55 +76,61 @@ capacity ..." />
         <div class="post-detail">
           <article class="post">
             <h2 class="post-title">
-              Netty相关的学习
+              SpringBoot整合Netty碰到的一个坑
             </h2>
             <div class="post-info">
               <span>
-                2020-03-22
+                2020-03-27
               </span>
               <span>
-                1 min read
+                2 min read
               </span>
               
             </div>
             
             <div class="post-content-wrapper">
               <div class="post-content">
-                <h1 id="nio">NIO</h1>
+                <p>这两天碰到一个坑,在整合了<code>SpringBoot</code>+<code>Netty</code>的服务想启用自动刷新配置,于是乎添加注解<code>@RefreshScope</code>,结果神奇的事情发生了,bean没有更新配置,经过不断的尝试,最后发现了导致这种情况的问题</p>
 <ul>
-<li>
-<h1 id="selector">selector</h1>
-</li>
+<li>第一个问题,就是我为了让netty能被nacos自动发现,这样好在网关层做负载均衡,因此注册的时候我将netty的端口注册到nacos上面去了,一开始我以为是因为端口的问题导致的,所以在网关层添加了一个过滤器,在websocket请求的时候变换一个端口,但是后来验证了一下,发现问题并不是这个似乎只要连上了nacos,就可以启用监听.</li>
+<li>后面发现了另一个问题,那就是netty启动服务的代码有问题</li>
 </ul>
-<p>接收到事件后切换到对应channel的选择器</p>
-<ul>
-<li>
-<h1 id="channel">channel</h1>
-</li>
-</ul>
-<p>对buffer进行读取的通道</p>
-<ul>
-<li>
-<h1 id="buffer">buffer</h1>
-</li>
-</ul>
-<p>读写数据的容器,有几个参数比较关键:</p>
-<ol>
-<li>limit : 最大长度</li>
-<li>capacity : 容器的容量</li>
-<li>position : 指针位置</li>
-<li>mark : 标记</li>
-</ol>
+<pre><code class="language-java">  ServerBootstrap serverBootstrap = new ServerBootstrap();
+        NioEventLoopGroup bossGroup = new NioEventLoopGroup();
+        NioEventLoopGroup workGroup = new NioEventLoopGroup();
+        try{
+            serverBootstrap.group(bossGroup,workGroup);
+            serverBootstrap.channel(NioServerSocketChannel.class);
+            serverBootstrap.childHandler(new ChannelInitializer(){
+
+                @Override
+                protected void initChannel(Channel channel) throws Exception {
+                    ChannelPipeline pipeline = channel.pipeline();
+                    //http编码解码
+                    pipeline.addLast(new HttpServerCodec());
+                   //块处理器
+                    pipeline.addLast(new ChunkedWriteHandler());
+                    //聚合处理
+                    pipeline.addLast(new HttpObjectAggregator(8192));
+                    //websocket处理
+                    pipeline.addLast(new WebSocketServerProtocolHandler(&quot;/websocket&quot;));
+                    pipeline.addLast(new WebsocketFrameHandler());
+                }
+
+            });
+            ChannelFuture bind = serverBootstrap.bind(nettyConfig.getNettyPort());
+            //这里不能使用同步阻塞的方式,不然会无法SpringBoot的线程,导致无法刷新配置
+//            bind.channel().closeFuture().sync();
+        }finally {
+//        bossGroup.shutdownGracefully();
+//        workGroup.shutdownGracefully();
+        }
+</code></pre>
+<p>见上面注释的地方,这个websocket服务是参考网上的代码,从而带来的一个坑,以后需要对网上的代码提高警惕性,不能看到就直接用了!</p>
 
               </div>
               <div class="toc-container">
-                <ul class="markdownIt-TOC">
-<li><a href="#nio">NIO</a></li>
-<li><a href="#selector">selector</a></li>
-<li><a href="#channel">channel</a></li>
-<li><a href="#buffer">buffer</a></li>
-</ul>
-
+                
               </div>
             </div>
           </article>
@@ -152,9 +139,9 @@ capacity ..." />
         
           <div class="next-post">
             <div class="next">下一篇</div>
-            <a href="https://zblzbl1991.github.io/post/springcloud-shi-yong-feign-yu-dao-de-keng/">
+            <a href="https://zblzbl1991.github.io/post/netty-xiang-guan-de-xue-xi/">
               <h3 class="post-title">
-                SpringCloud使用Feign遇到的坑
+                Netty相关的学习
               </h3>
             </a>
           </div>
