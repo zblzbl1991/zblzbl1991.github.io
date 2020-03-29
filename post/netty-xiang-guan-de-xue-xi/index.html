@@ -3,7 +3,7 @@
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Netty相关的学习 | 笨猪的窝</title>
-<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1585300378589">
+<link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1585469928814">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
 <link rel="alternate" type="application/atom+xml" title="Netty相关的学习 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
@@ -33,7 +33,7 @@ buffer
 
 limit : 最大长度
 capacity ..." />
-    <meta name="keywords" content="" />
+    <meta name="keywords" content="Netty" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
   </head>
@@ -42,13 +42,13 @@ capacity ..." />
       <div class="main-content">
         <div class="site-header">
   <a href="https://zblzbl1991.github.io">
-  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1585300378589" alt="">
+  <img class="avatar" src="https://zblzbl1991.github.io/images/avatar.png?v=1585469928814" alt="">
   </a>
   <h1 class="site-title">
     笨猪的窝
   </h1>
   <p class="site-description">
-    温故而知新
+    做自己想做的
   </p>
   <div class="menu-container">
     
@@ -105,6 +105,10 @@ capacity ..." />
                 2 min read
               </span>
               
+                <a href="https://zblzbl1991.github.io/tag/FfCyY0zDU/" class="post-tag">
+                  # Netty
+                </a>
+              
             </div>
             
             <div class="post-content-wrapper">
@@ -134,6 +138,18 @@ capacity ..." />
 <li>position : 指针位置</li>
 <li>mark : 标记</li>
 </ol>
+<ul>
+<li>
+<h1 id="零拷贝">零拷贝</h1>
+</li>
+</ul>
+<p>从操作系统角度说,因为内核缓冲区数据是没有重复的</p>
+<ul>
+<li>
+<h1 id="aio">AIO</h1>
+</li>
+</ul>
+<p>基于操作系统实现的新一代io模型,特点是先由操作系统完成后再通知服务器去处理.</p>
 <h1 id="一个socketserverchannel实例">一个SocketServerChannel实例</h1>
 <pre><code class="language-java">		//开启ServerSocketChannel
   	ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
@@ -161,6 +177,7 @@ capacity ..." />
   				System.out.println(&quot;客户端连接成功,socketchannel&quot; + socketChannel.hashCode());
   				socketChannel.configureBlocking(false);
   				//注册read事件到selector上
+                  //并添加一个接收读取数据的缓冲区
   				socketChannel.register(selector, SelectionKey.OP_READ, ByteBuffer.allocate(1024));
   			}
   			if (key.isReadable()) {
@@ -200,6 +217,8 @@ capacity ..." />
 <li><a href="#selector">selector</a></li>
 <li><a href="#channel">channel</a></li>
 <li><a href="#buffer">buffer</a></li>
+<li><a href="#%E9%9B%B6%E6%8B%B7%E8%B4%9D">零拷贝</a></li>
+<li><a href="#aio">AIO</a></li>
 <li><a href="#%E4%B8%80%E4%B8%AAsocketserverchannel%E5%AE%9E%E4%BE%8B">一个SocketServerChannel实例</a></li>
 <li><a href="#%E4%B8%80%E4%B8%AAsocketclienchannel%E5%AE%9E%E4%BE%8B">一个SocketClienChannel实例</a></li>
 </ul>
