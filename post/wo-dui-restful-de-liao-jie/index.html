@@ -2,20 +2,18 @@
   <head>
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Netty相关的学习(2)-NettyDemo | 笨猪的窝</title>
+<title>我对RESTFUL的了解 | 笨猪的窝</title>
 <link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1586185562910">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="Netty相关的学习(2)-NettyDemo | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="alternate" type="application/atom+xml" title="我对RESTFUL的了解 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="Netty中的工作组 EventLoopGroup初始化的线程池中有多少个线程?
-  //默认核心数: cpu核数*2
-    NioEventLoopGroup bossGroup = new NioEventLoopGroup();
-	..." />
-    <meta name="keywords" content="Netty" />
+    <meta name="description" content="restful,其实简单说就是一种对资源路径定义的规范,目的是用来约束代码中请求url的,通常使用GET,POST,PUT,DELETE四种方式对应增删改查.
+最开始的时候我简单的把上面四种请求方式对应上4种增删改查,但是实际上并没有那么简..." />
+    <meta name="keywords" content="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
   </head>
@@ -77,7 +75,7 @@
         <div class="post-detail">
           <article class="post">
             <h2 class="post-title">
-              Netty相关的学习(2)-NettyDemo
+              我对RESTFUL的了解
             </h2>
             <div class="post-info">
               <span>
@@ -87,25 +85,12 @@
                 1 min read
               </span>
               
-                <a href="https://zblzbl1991.github.io/tag/FfCyY0zDU/" class="post-tag">
-                  # Netty
-                </a>
-              
             </div>
             
             <div class="post-content-wrapper">
               <div class="post-content">
-                <p>Netty中的工作组 EventLoopGroup初始化的线程池中有多少个线程?</p>
-<pre><code class="language-java">  //默认核心数: cpu核数*2
-    NioEventLoopGroup bossGroup = new NioEventLoopGroup();
-	NioEventLoopGroup workGroup = new NioEventLoopGroup();
-    因为如下:
-private static final int DEFAULT_EVENT_LOOP_THREADS = 
-Math.max(1, SystemPropertyUtil.getInt(&quot;io.netty.eventLoopThreads&quot;, NettyRuntime.availableProcessors() * 2));
-</code></pre>
-<p>channel和pipeline:相互包含<br>
-ctx:包含了整个的上下文关系<br>
-本质上pipline就是个双向链表,从api也可以看出来</p>
+                <p>restful,其实简单说就是一种对资源路径定义的规范,目的是用来约束代码中请求url的,通常使用GET,POST,PUT,DELETE四种方式对应增删改查.<br>
+最开始的时候我简单的把上面四种请求方式对应上4种增删改查,但是实际上并没有那么简单,经过进一步的了解.更加合理的使用方式是把post作为非幂等请求操作,put,delete,get为幂等操作.</p>
 
               </div>
               <div class="toc-container">
@@ -118,9 +103,9 @@ ctx:包含了整个的上下文关系<br>
         
           <div class="next-post">
             <div class="next">下一篇</div>
-            <a href="https://zblzbl1991.github.io/post/springboot-zheng-he-netty-peng-dao-de-yi-ge-keng/">
+            <a href="https://zblzbl1991.github.io/post/netty-xiang-guan-de-xue-xi-2/">
               <h3 class="post-title">
-                SpringBoot整合Netty碰到的一个坑
+                Netty相关的学习(2)-NettyDemo
               </h3>
             </a>
           </div>

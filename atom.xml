@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://zblzbl1991.github.io</id>
     <title>笨猪的窝</title>
-    <updated>2020-04-06T15:02:26.272Z</updated>
+    <updated>2020-04-06T15:06:04.502Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://zblzbl1991.github.io"/>
     <link rel="self" href="https://zblzbl1991.github.io/atom.xml"/>
@@ -10,6 +10,13 @@
     <logo>https://zblzbl1991.github.io/images/avatar.png</logo>
     <icon>https://zblzbl1991.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, 笨猪的窝</rights>
+    <entry>
+        <title type="html"><![CDATA[我对RESTFUL的了解]]></title>
+        <id>https://zblzbl1991.github.io/post/wo-dui-restful-de-liao-jie/</id>
+        <link href="https://zblzbl1991.github.io/post/wo-dui-restful-de-liao-jie/">
+        </link>
+        <updated>2020-04-06T15:02:31.000Z</updated>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Netty相关的学习(2)-NettyDemo]]></title>
         <id>https://zblzbl1991.github.io/post/netty-xiang-guan-de-xue-xi-2/</id>
