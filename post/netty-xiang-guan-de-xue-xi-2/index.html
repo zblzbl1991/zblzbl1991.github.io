@@ -2,19 +2,19 @@
   <head>
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SpringBoot2.X中校验变量的方法 | 笨猪的窝</title>
+<title>Netty相关的学习(2) | 笨猪的窝</title>
 <link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1586155317707">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="SpringBoot2.X中校验变量的方法 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="alternate" type="application/atom+xml" title="Netty相关的学习(2) | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="通常我们会在Controller里使用@Valid/@Validated等注解加载参数上,如这种:
-	@PostMapping(&quot;hello3&quot;)
-	public String hello3(@Validated @Re..." />
-    <meta name="keywords" content="SpringBoot" />
+    <meta name="description" content="  //默认核心数: cpu核数*2
+    NioEventLoopGroup bossGroup = new NioEventLoopGroup();
+	NioEventLoopGroup workGroup = new NioEven..." />
+    <meta name="keywords" content="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
   </head>
@@ -76,49 +76,26 @@
         <div class="post-detail">
           <article class="post">
             <h2 class="post-title">
-              SpringBoot2.X中校验变量的方法
+              Netty相关的学习(2)
             </h2>
             <div class="post-info">
               <span>
-                2020-03-22
+                2020-04-06
               </span>
               <span>
                 1 min read
               </span>
               
-                <a href="https://zblzbl1991.github.io/tag/Ek7VWgC-Z/" class="post-tag">
-                  # SpringBoot
-                </a>
-              
             </div>
             
             <div class="post-content-wrapper">
               <div class="post-content">
-                <p>通常我们会在Controller里使用<code>@Valid/@Validated</code>等注解加载参数上,如这种:</p>
-<pre><code class="language-java">	@PostMapping(&quot;hello3&quot;)
-	public String hello3(@Validated @RequestBody JSONObject jsonObject) throws ApplicationException {
-		throw ApplicationException.instance(Reasons.REMOTE_PROCEDURE_CALL_TIME_OUT);
-	}
-</code></pre>
-<p>然后实体类上使用诸如<code>@NotNull,@NotBlank,@MaxLength</code>等注解,这样在客户端请求的时候就会自动进行校验(更多用法自行查找),但是如果想要手动校验呢?这个时候我们可以这样:<br>
-自动注入<code>Validator</code>,如下</p>
-<pre><code class="language-java">@SpringBootTest(classes = DemoApplication.class)
-@RunWith(SpringRunner.class)
-//@WebAppConfiguration
-public class HelloTest {
-	@Autowired
-	private Validator validate;
-	@Test
-	public void test(){
-		User user = new User();
-		Set&lt;ConstraintViolation&lt;User&gt;&gt; validate = this.validate.validate(user);
-		validate.size();
-		for (ConstraintViolation&lt;User&gt; userConstraintViolation : validate) {
-			String message = userConstraintViolation.getMessage();
-			System.out.println(message);
-		}
-	}
-}
+                <pre><code class="language-java">  //默认核心数: cpu核数*2
+    NioEventLoopGroup bossGroup = new NioEventLoopGroup();
+	NioEventLoopGroup workGroup = new NioEventLoopGroup();
+    因为如下:
+private static final int DEFAULT_EVENT_LOOP_THREADS = 
+Math.max(1, SystemPropertyUtil.getInt(&quot;io.netty.eventLoopThreads&quot;, NettyRuntime.availableProcessors() * 2));
 </code></pre>
 
               </div>
@@ -132,9 +109,9 @@ public class HelloTest {
         
           <div class="next-post">
             <div class="next">下一篇</div>
-            <a href="https://zblzbl1991.github.io/post/springcloudgateway-huo-qu-qing-qiu-can-shu/">
+            <a href="https://zblzbl1991.github.io/post/springboot-zheng-he-netty-peng-dao-de-yi-ge-keng/">
               <h3 class="post-title">
-                SpringCloudGateway获取请求参数
+                SpringBoot整合Netty碰到的一个坑
               </h3>
             </a>
           </div>
