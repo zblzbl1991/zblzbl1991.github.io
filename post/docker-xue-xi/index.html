@@ -2,18 +2,23 @@
   <head>
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SpringCloud使用Feign遇到的坑 | 笨猪的窝</title>
+<title>docker学习 | 笨猪的窝</title>
 <link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1592740616404">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="SpringCloud使用Feign遇到的坑 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="alternate" type="application/atom+xml" title="docker学习 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="之前使用feign做远程调用的时候碰到一个坑,GET请求不能直接传实体类,经过研究发现,必须要引入openfeign-http,http-client这两个组件,使feign支持apache httpclient.
-否则默认使用jdk的ht..." />
-    <meta name="keywords" content="SpringCloud" />
+    <meta name="description" content="CMD :用于指定默认的容器主进程的启动命令的
+ENTRYPOINT: 用于指定容器运行程序和参数
+EXPOSE:声明端口
+
+redis
+1. 首先安装下 docker pull redis:latest
+2. 然后运行redis容器 do..." />
+    <meta name="keywords" content="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
   </head>
@@ -75,29 +80,35 @@
         <div class="post-detail">
           <article class="post">
             <h2 class="post-title">
-              SpringCloud使用Feign遇到的坑
+              docker学习
             </h2>
             <div class="post-info">
               <span>
-                2020-03-22
+                2020-06-21
               </span>
               <span>
-                2 min read
+                1 min read
               </span>
-              
-                <a href="https://zblzbl1991.github.io/tag/yqCjyz_f6/" class="post-tag">
-                  # SpringCloud
-                </a>
               
             </div>
             
             <div class="post-content-wrapper">
               <div class="post-content">
-                <p>之前使用feign做远程调用的时候碰到一个坑,<code>GET</code>请求不能直接传实体类,经过研究发现,必须要引入<code>openfeign-http</code>,<code>http-client</code>这两个组件,使feign支持<code>apache httpclient</code>.<br>
-否则默认使用<code>jdk的httpclient,</code>这样在传输的时候如果是实体类,就会转成<code>POST</code>请求,之后按照教程这样修改后,可以正常传递实体类了,但是又出现了另一个问题了,那就是接收端必须要加上<code>@RequestBody</code>,使用json格式来接收,<code>GET</code>请求从body里取出json格式的参数,看起来很怪,因为通常都是在'POST'请求中从body取出参数这样来操作的,<code>GET</code>请求一般是在url后面来获取参数<br>
-那么<code>GET</code>请求有body吗?显然是有的,但是如果使用老版本的Postman,等工具是无法在<code>GET</code>请求的时候传递body的,因为HTTP协议的规范中并不支持这样做,从而引申出来的一个问题:<code>GET</code>请求和<code>POST</code>请求到底有什么区别?<br>
-我个人理解:就是对请求协议的格式规范作用<br>
-值得一提的是,<code>SpringBoot2.1</code>之后 <code>Feign</code>可以使用<code>@SpringQueryMap</code>来支持<code>GET</code>请求传递实体类了, 可以更加简单的使用<code>Feign</code>了!</p>
+                <p><code>CMD</code> :用于指定默认的容器主进程的启动命令的<br>
+<code>ENTRYPOINT</code>: 用于指定容器运行程序和参数<br>
+<code>EXPOSE</code>:声明端口</p>
+<ol>
+<li>redis<br>
+1. 首先安装下 <code>docker pull redis:latest</code><br>
+2. 然后运行redis容器 <code>docker run -itd --name redis-test -p 6379:6379 redis</code>  参数的作用:
+<ul>
+<li>-i  以交互模式运行容器，通常与 -t 同时使用；</li>
+<li>-t  为容器重新分配一个伪输入终端，通常与 -i 同时使用；</li>
+<li>-d 后台运行容器，并返回容器ID；</li>
+</ul>
+</li>
+<li></li>
+</ol>
 
               </div>
               <div class="toc-container">
@@ -110,9 +121,9 @@
         
           <div class="next-post">
             <div class="next">下一篇</div>
-            <a href="https://zblzbl1991.github.io/post/springboot2x-zhong-xiao-yan-bian-liang-de-fang-fa/">
+            <a href="https://zblzbl1991.github.io/post/java8-dui-stream-liu-de-shi-yong/">
               <h3 class="post-title">
-                SpringBoot2.X中校验变量的方法
+                java8对Stream流的使用
               </h3>
             </a>
           </div>

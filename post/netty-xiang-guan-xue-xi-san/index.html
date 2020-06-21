@@ -2,18 +2,18 @@
   <head>
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SpringCloud使用Feign遇到的坑 | 笨猪的窝</title>
+<title>Netty相关学习(三) | 笨猪的窝</title>
 <link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1592740616404">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="SpringCloud使用Feign遇到的坑 | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="alternate" type="application/atom+xml" title="Netty相关学习(三) | 笨猪的窝 - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="之前使用feign做远程调用的时候碰到一个坑,GET请求不能直接传实体类,经过研究发现,必须要引入openfeign-http,http-client这两个组件,使feign支持apache httpclient.
-否则默认使用jdk的ht..." />
-    <meta name="keywords" content="SpringCloud" />
+    <meta name="description" content="今天学习中发现了一个apache出的IOUtils工具类,是用NIO来处理文件上传下载的,感觉能省不少事情,以后有空再深入研究下
+" />
+    <meta name="keywords" content="Netty" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
   </head>
@@ -75,29 +75,25 @@
         <div class="post-detail">
           <article class="post">
             <h2 class="post-title">
-              SpringCloud使用Feign遇到的坑
+              Netty相关学习(三)
             </h2>
             <div class="post-info">
               <span>
-                2020-03-22
+                2020-04-19
               </span>
               <span>
-                2 min read
+                1 min read
               </span>
               
-                <a href="https://zblzbl1991.github.io/tag/yqCjyz_f6/" class="post-tag">
-                  # SpringCloud
+                <a href="https://zblzbl1991.github.io/tag/FfCyY0zDU/" class="post-tag">
+                  # Netty
                 </a>
               
             </div>
             
             <div class="post-content-wrapper">
               <div class="post-content">
-                <p>之前使用feign做远程调用的时候碰到一个坑,<code>GET</code>请求不能直接传实体类,经过研究发现,必须要引入<code>openfeign-http</code>,<code>http-client</code>这两个组件,使feign支持<code>apache httpclient</code>.<br>
-否则默认使用<code>jdk的httpclient,</code>这样在传输的时候如果是实体类,就会转成<code>POST</code>请求,之后按照教程这样修改后,可以正常传递实体类了,但是又出现了另一个问题了,那就是接收端必须要加上<code>@RequestBody</code>,使用json格式来接收,<code>GET</code>请求从body里取出json格式的参数,看起来很怪,因为通常都是在'POST'请求中从body取出参数这样来操作的,<code>GET</code>请求一般是在url后面来获取参数<br>
-那么<code>GET</code>请求有body吗?显然是有的,但是如果使用老版本的Postman,等工具是无法在<code>GET</code>请求的时候传递body的,因为HTTP协议的规范中并不支持这样做,从而引申出来的一个问题:<code>GET</code>请求和<code>POST</code>请求到底有什么区别?<br>
-我个人理解:就是对请求协议的格式规范作用<br>
-值得一提的是,<code>SpringBoot2.1</code>之后 <code>Feign</code>可以使用<code>@SpringQueryMap</code>来支持<code>GET</code>请求传递实体类了, 可以更加简单的使用<code>Feign</code>了!</p>
+                <p>今天学习中发现了一个apache出的IOUtils工具类,是用NIO来处理文件上传下载的,感觉能省不少事情,以后有空再深入研究下</p>
 
               </div>
               <div class="toc-container">
@@ -110,9 +106,9 @@
         
           <div class="next-post">
             <div class="next">下一篇</div>
-            <a href="https://zblzbl1991.github.io/post/springboot2x-zhong-xiao-yan-bian-liang-de-fang-fa/">
+            <a href="https://zblzbl1991.github.io/post/wo-dui-restful-de-liao-jie/">
               <h3 class="post-title">
-                SpringBoot2.X中校验变量的方法
+                我对RESTFUL的了解
               </h3>
             </a>
           </div>
