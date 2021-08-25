@@ -2,24 +2,22 @@
   <head>
     <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Hello Gridea | Gridea</title>
+<title>docker安装skywalking | Gridea</title>
 <link rel="shortcut icon" href="https://zblzbl1991.github.io/favicon.ico?v=1629862363211">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://zblzbl1991.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="Hello Gridea | Gridea - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
+<link rel="alternate" type="application/atom+xml" title="docker安装skywalking | Gridea - Atom Feed" href="https://zblzbl1991.github.io/atom.xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="👏  欢迎使用 Gridea ！
-✍️  Gridea 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...
+    <meta name="description" content="
 
-Github
-Gridea 主页
-示例网站
-特性👇
-📝  你可以使用最酷的 Markdo..." />
-    <meta name="keywords" content="Gridea" />
+安装elasticsearch
+
+
+docker run -d --name=es7 -p 9200:9200 -p 9300:9300 -e &quot;discovery.type=single-node&quot; elastic..." />
+    <meta name="keywords" content="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
     <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
   </head>
@@ -81,54 +79,63 @@ Gridea 主页
         <div class="post-detail">
           <article class="post">
             <h2 class="post-title">
-              Hello Gridea
+              docker安装skywalking
             </h2>
             <div class="post-info">
               <span>
-                2018-12-12
+                2021-08-25
               </span>
               <span>
                 2 min read
               </span>
               
-                <a href="https://zblzbl1991.github.io/tag/T38xplDJ6/" class="post-tag">
-                  # Gridea
-                </a>
-              
             </div>
-            
-              <img class="post-feature-image" src="https://zblzbl1991.github.io/post-images/hello-gridea.png" alt="">
             
             <div class="post-content-wrapper">
               <div class="post-content">
-                <p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-<!-- more -->
-<p><a href="https://github.com/getgridea/gridea">Github</a><br>
-<a href="https://gridea.dev/">Gridea 主页</a><br>
-<a href="http://fehey.com/">示例网站</a></p>
-<h2 id="特性">特性👇</h2>
-<p>📝  你可以使用最酷的 <strong>Markdown</strong> 语法，进行快速创作</p>
-<p>🌉  你可以给文章配上精美的封面图和在文章任意位置插入图片</p>
-<p>🏷️  你可以对文章进行标签分组</p>
-<p>📋  你可以自定义菜单，甚至可以创建外部链接菜单</p>
-<p>💻  你可以在 <strong>Windows</strong>，<strong>MacOS</strong> 或 <strong>Linux</strong> 设备上使用此客户端</p>
-<p>🌎  你可以使用 <strong>𝖦𝗂𝗍𝗁𝗎𝖻 𝖯𝖺𝗀𝖾𝗌</strong> 或 <strong>Coding Pages</strong> 向世界展示，未来将支持更多平台</p>
-<p>💬  你可以进行简单的配置，接入 <a href="https://github.com/gitalk/gitalk">Gitalk</a> 或 <a href="https://github.com/SukkaW/DisqusJS">DisqusJS</a> 评论系统</p>
-<p>🇬🇧  你可以使用<strong>中文简体</strong>或<strong>英语</strong></p>
-<p>🌁  你可以任意使用应用内默认主题或任意第三方主题，强大的主题自定义能力</p>
-<p>🖥  你可以自定义源文件夹，利用 OneDrive、百度网盘、iCloud、Dropbox 等进行多设备同步</p>
-<p>🌱 当然 <strong>Gridea</strong> 还很年轻，有很多不足，但请相信，它会不停向前 🏃</p>
-<p>未来，它一定会成为你离不开的伙伴</p>
-<p>尽情发挥你的才华吧！</p>
-<p>😘 Enjoy~</p>
+                <ol>
+<li>
+<h3 id="安装elasticsearch">安装elasticsearch</h3>
+</li>
+</ol>
+<pre><code>docker run -d --name=es7 -p 9200:9200 -p 9300:9300 -e &quot;discovery.type=single-node&quot; elasticsearch:7.5.1
+</code></pre>
+<p>​	然后将数据复制出来建立一个目录</p>
+<pre><code class="language-docker">docker cp es7:/usr/share/elasticsearch/logs /data/elasticsearch/
+docker rm -f es7
+mkdir -p /data/elasticsearch
+</code></pre>
+<p>执行完之后再次启动</p>
+<pre><code class="language-shell">docker run -d --name=es7 --restart=always -p 9200:9200 -p 9300:9300 -e &quot;discovery.type=single-node&quot; -e ES_JAVA_OPTS=&quot;-Xms512m -Xmx512m&quot; -v /data/elasticsearch/data:/usr/share/elasticsearch/data  -v /data/elasticsearch/logs:/usr/share/elasticsearch/logs  elasticsearch:7.5.1
+</code></pre>
+<p>这里可能会报错权限不足,那么这个时候需要对上个操作建立的目录进行授权操作</p>
+<pre><code class="language-shell">sudo chmod 777 -R /data/elasticsearch
+</code></pre>
+<p>然后再次启动es</p>
+<ol start="2">
+<li>
+<h3 id="安装skywalking">安装skywalking</h3>
+</li>
+</ol>
+<pre><code class="language-shell">docker run --name skywalking-oap-server --restart always -d --restart=always  -e TZ=Asia/Shanghai  -p 12800:12800  -p 11800:11800 --link es7:es7 -e SW_STORAGE=elasticsearch -e SW_STORAGE_ES_CLUSTER_NODES=es7:9200 apache/skywalking-oap-server:6.6.0-es7
+</code></pre>
+<p>接着安装管理界面</p>
+<pre><code class="language-shell">docker run -d --name skywalking-ui  --restart=always  -e TZ=Asia/Shanghai  -p 8088:8080  --link skywalking:skywalking  -e SW_OAP_ADDRESS=skywalking:12800  apache/skywalking-ui:6.6.0  --security.user.admin.password=admin
+</code></pre>
+<p>然后配置端口开放</p>
+<figure data-type="image" tabindex="1"><img src="https://zblzbl1991.github.io/post-images/1629862052220.png" alt="" loading="lazy"></figure>
 
               </div>
               <div class="toc-container">
                 <ul class="markdownIt-TOC">
 <li>
 <ul>
-<li><a href="#%E7%89%B9%E6%80%A7">特性👇</a></li>
+<li>
+<ul>
+<li><a href="#%E5%AE%89%E8%A3%85elasticsearch">安装elasticsearch</a></li>
+<li><a href="#%E5%AE%89%E8%A3%85skywalking">安装skywalking</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -138,6 +145,15 @@ Gridea 主页
           </article>
         </div>
 
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://zblzbl1991.github.io/post/hello-gridea/">
+              <h3 class="post-title">
+                Hello Gridea
+              </h3>
+            </a>
+          </div>
         
 
         

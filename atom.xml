@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://zblzbl1991.github.io</id>
     <title>Gridea</title>
-    <updated>2021-08-25T03:09:46.793Z</updated>
+    <updated>2021-08-25T03:32:47.450Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://zblzbl1991.github.io"/>
     <link rel="self" href="https://zblzbl1991.github.io/atom.xml"/>
@@ -10,6 +10,183 @@
     <logo>https://zblzbl1991.github.io/images/avatar.png</logo>
     <icon>https://zblzbl1991.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, Gridea</rights>
+    <entry>
+        <title type="html"><![CDATA[解决ConditionOnBean(DataSource.class)的加载顺序的问题]]></title>
+        <id>https://zblzbl1991.github.io/post/jie-jue-conditiononbeandatasourceclassde-jia-zai-shun-xu-de-wen-ti/</id>
+        <link href="https://zblzbl1991.github.io/post/jie-jue-conditiononbeandatasourceclassde-jia-zai-shun-xu-de-wen-ti/">
+        </link>
+        <updated>2021-08-25T03:32:12.000Z</updated>
+        <content type="html"><![CDATA[<p>前两天碰到个问题,本来是打算利用SpringBoot的@ConditionOnBean来处理当配置了数据源使用ABean,没有就是用BBean,可是我在配置表中的ConditionOnBean(DataSource.class)的时候,提示我bean not found javax.sql.DataSource ,网上找了蛮久,都是只说了Bean加载顺序,但是没有说如何解决的.</p>
+<p>今天看到一个解决方法,利用SpringBoot的Bean延期加载器  <code>DeferredImportSelector</code></p>
+<p>具体解决代码:</p>
+<pre><code class="language-java">/** @author zhaobaolong
+ * @date 2021/8/25 9:00
+ * @description condition延期选择器实现
+ */
+public class ConditionDeferredImportSelector implements DeferredImportSelector {
+    @Override
+    public String[] selectImports(AnnotationMetadata annotationMetadata) {
+        return new String[]{LogConfig.class.getName()};
+    }
+}
+</code></pre>
+<pre><code class="language-java"> /** @author zhaobaolong
+ * @date 2021/8/23 15:50
+ * @description 提供一个初始化配置的类
+ */
+@Slf4j
+public class LogConfig {
+    private static final String APP_NAME =&quot;defaultLog&quot;;
+    @Autowired
+    private RedisTemplate&lt;String,Object&gt; redisTemplate;
+
+    @Bean
+    @ConditionalOnMissingBean(value = {JdbcTemplate.class})
+    public JdbcTemplate jdbcTemplate(DataSource dataSource){
+        log.info(&quot;加载默认jdbcTemplate&quot;);
+        return new JdbcTemplate(dataSource);
+    }
+    @Bean
+    @ConditionalOnMissingBean(ILogProducer.class)
+    public ILogProducer producer(){
+        log.info(&quot;加载默认Producer&quot;);
+        RedisUtil redisUtil = new RedisUtil(redisTemplate, APP_NAME);
+        return new DefaultLogProducerImpl(redisUtil);
+    }
+    @Bean
+    @ConditionalOnMissingBean(ILogConsumer.class)
+    public ILogConsumer consumer(ILogStorage storage){
+        log.info(&quot;加载默认Consumer&quot;);
+        RedisUtil redisUtil = new RedisUtil(redisTemplate, APP_NAME);
+        return new DefaultLogConsumerImpl(redisUtil,storage);
+    }
+
+    @Bean
+    @ConditionalOnBean(value = {DataSource.class})
+    @ConditionalOnMissingBean(ILogStorage.class)
+    public ILogStorage jdbcStorage(  ){
+        log.info(&quot;加载jdbc storage&quot;);
+        return new JDBCStorageHandler();
+    }
+    @Bean
+    @ConditionalOnMissingBean(value = {ILogStorage.class})
+    public ILogStorage storage(){
+        log.info(&quot;加载默认输出控制台storage&quot;);
+        return new DefaultLogStorageImpl();
+    }
+
+
+
+}
+</code></pre>
+<pre><code class="language-java"> /** 开启日志
+ *
+ * @Author: wubin
+ * @DATE: 2021/3/11 0011 下午 15:44
+ */
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Documented
+@Import({LogRecordAspect.class, ConditionDeferredImportSelector.class, SecurityUtil.class})
+public @interface EnableLog {
+}
+</code></pre>
+<p>这样配置,在初始化的时候就会先加载默认Bean执行顺序,执行完之后,再加载延期后的Bean</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[关于解决ApplicationListener重复执行]]></title>
+        <id>https://zblzbl1991.github.io/post/guan-yu-jie-jue-applicationlistener-chong-fu-zhi-xing/</id>
+        <link href="https://zblzbl1991.github.io/post/guan-yu-jie-jue-applicationlistener-chong-fu-zhi-xing/">
+        </link>
+        <updated>2021-08-25T03:28:05.000Z</updated>
+        <content type="html"><![CDATA[<p>类实现ApplicationListener之后,再实现ApplicationContextAware</p>
+<p>我是参考Dubbo的方法,它的实现方式是:</p>
+<pre><code class="language-java">public abstract class OnceApplicationContextEventListener implements ApplicationListener, ApplicationContextAware {
+    protected final Log log = LogFactory.getLog(this.getClass());
+    private ApplicationContext applicationContext;
+
+    public OnceApplicationContextEventListener() {
+    }
+
+    public OnceApplicationContextEventListener(ApplicationContext applicationContext) {
+        this.setApplicationContext(applicationContext);
+    }
+
+    public final void onApplicationEvent(ApplicationEvent event) {
+        if (this.isOriginalEventSource(event) &amp;&amp; event instanceof ApplicationContextEvent) {
+            this.onApplicationContextEvent((ApplicationContextEvent)event);
+        }
+
+    }
+
+    protected abstract void onApplicationContextEvent(ApplicationContextEvent var1);
+
+    private boolean isOriginalEventSource(ApplicationEvent event) {
+        boolean originalEventSource = ObjectUtils.nullSafeEquals(this.getApplicationContext(), event.getSource());
+        if (!originalEventSource &amp;&amp; this.log.isDebugEnabled()) {
+            this.log.debug(&quot;The source of event[&quot; + event.getSource() + &quot;] is not original!&quot;);
+        }
+
+        return originalEventSource;
+    }
+
+    public final void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
+
+    public ApplicationContext getApplicationContext() {
+        //判断上下文是否初始化,只有未初始化前才执行,这样可以防止重复执行 onApplicationEvent
+        if (this.applicationContext == null) {
+            throw new NullPointerException(&quot;applicationContext must be not null, it has to invoke setApplicationContext(ApplicationContext) method first if &quot; + ClassUtils.getShortName(this.getClass()) + &quot; instance is not a Spring Bean&quot;);
+        } else {
+            return this.applicationContext;
+        }
+    }
+}
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[docker安装skywalking]]></title>
+        <id>https://zblzbl1991.github.io/post/docker-an-zhuang-skywalking/</id>
+        <link href="https://zblzbl1991.github.io/post/docker-an-zhuang-skywalking/">
+        </link>
+        <updated>2021-08-25T03:27:02.000Z</updated>
+        <content type="html"><![CDATA[<ol>
+<li>
+<h3 id="安装elasticsearch">安装elasticsearch</h3>
+</li>
+</ol>
+<pre><code>docker run -d --name=es7 -p 9200:9200 -p 9300:9300 -e &quot;discovery.type=single-node&quot; elasticsearch:7.5.1
+</code></pre>
+<p>​	然后将数据复制出来建立一个目录</p>
+<pre><code class="language-docker">docker cp es7:/usr/share/elasticsearch/logs /data/elasticsearch/
+docker rm -f es7
+mkdir -p /data/elasticsearch
+</code></pre>
+<p>执行完之后再次启动</p>
+<pre><code class="language-shell">docker run -d --name=es7 --restart=always -p 9200:9200 -p 9300:9300 -e &quot;discovery.type=single-node&quot; -e ES_JAVA_OPTS=&quot;-Xms512m -Xmx512m&quot; -v /data/elasticsearch/data:/usr/share/elasticsearch/data  -v /data/elasticsearch/logs:/usr/share/elasticsearch/logs  elasticsearch:7.5.1
+</code></pre>
+<p>这里可能会报错权限不足,那么这个时候需要对上个操作建立的目录进行授权操作</p>
+<pre><code class="language-shell">sudo chmod 777 -R /data/elasticsearch
+</code></pre>
+<p>然后再次启动es</p>
+<ol start="2">
+<li>
+<h3 id="安装skywalking">安装skywalking</h3>
+</li>
+</ol>
+<pre><code class="language-shell">docker run --name skywalking-oap-server --restart always -d --restart=always  -e TZ=Asia/Shanghai  -p 12800:12800  -p 11800:11800 --link es7:es7 -e SW_STORAGE=elasticsearch -e SW_STORAGE_ES_CLUSTER_NODES=es7:9200 apache/skywalking-oap-server:6.6.0-es7
+</code></pre>
+<p>接着安装管理界面</p>
+<pre><code class="language-shell">docker run -d --name skywalking-ui  --restart=always  -e TZ=Asia/Shanghai  -p 8088:8080  --link skywalking:skywalking  -e SW_OAP_ADDRESS=skywalking:12800  apache/skywalking-ui:6.6.0  --security.user.admin.password=admin
+</code></pre>
+<p>然后配置端口开放</p>
+<figure data-type="image" tabindex="1"><img src="https://zblzbl1991.github.io/post-images/1629862052220.png" alt="" loading="lazy"></figure>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Hello Gridea]]></title>
         <id>https://zblzbl1991.github.io/post/hello-gridea/</id>
