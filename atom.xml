@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://zblzbl1991.github.io</id>
     <title>Gridea</title>
-    <updated>2021-08-25T04:19:31.305Z</updated>
+    <updated>2021-08-27T10:03:55.782Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://zblzbl1991.github.io"/>
     <link rel="self" href="https://zblzbl1991.github.io/atom.xml"/>
@@ -10,6 +10,81 @@
     <logo>https://zblzbl1991.github.io/images/avatar.png</logo>
     <icon>https://zblzbl1991.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, Gridea</rights>
+    <entry>
+        <title type="html"><![CDATA[docker-compose的使用]]></title>
+        <id>https://zblzbl1991.github.io/post/docker-compose-de-shi-yong/</id>
+        <link href="https://zblzbl1991.github.io/post/docker-compose-de-shi-yong/">
+        </link>
+        <updated>2021-08-27T07:34:35.000Z</updated>
+        <content type="html"><![CDATA[<p>最开始想先了解一下docker-machine,但是发现用处并不大,所以先学习一下docker-compose,记录一下学习的经历:</p>
+<ol>
+<li>安装docker-compose</li>
+</ol>
+<p>按照官网上的流程走:<br>
+官网下载最新的安装包</p>
+<pre><code class="language-shell">sudo curl -L &quot;https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)&quot; -o /usr/local/bin/docker-compose
+</code></pre>
+<p>接着提升权限</p>
+<pre><code class="language-shell">sudo chmod +x /usr/local/bin/docker-compose
+</code></pre>
+<p>将路径指向/usr/bin</p>
+<pre><code class="language-shell">sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+</code></pre>
+<p>搞定之后就测试一下</p>
+<pre><code class="language-shell">[hnmsg@iZm5ejfv28yygbtfl4txm2Z ~]$ docker-compose version
+docker-compose version 1.29.2, build 5becea4c
+docker-py version: 5.0.0
+CPython version: 3.7.10
+OpenSSL version: OpenSSL 1.1.0l  10 Sep 2019
+</code></pre>
+<ol start="2">
+<li>学习模板文件,跟着官网的来就行,使用起来感觉还是比较简单的</li>
+</ol>
+<pre><code>https://docs.docker.com/compose/gettingstarted/
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[软考系统架构设计师]]></title>
+        <id>https://zblzbl1991.github.io/post/ruan-kao-xi-tong-jia-gou-she-ji-shi/</id>
+        <link href="https://zblzbl1991.github.io/post/ruan-kao-xi-tong-jia-gou-she-ji-shi/">
+        </link>
+        <updated>2021-08-26T05:14:31.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="操作系统">操作系统</h2>
+<h2 id="数据库系统">数据库系统</h2>
+<p>数据库系统划分为三级:</p>
+<ol>
+<li>物理级</li>
+<li>概念级</li>
+<li>用户级</li>
+</ol>
+<p>关系模型分解需要遵循两个准则:</p>
+<ol>
+<li>
+<p>无损连接性：信息不失真（不增减信息）。</p>
+</li>
+<li>
+<p>函数依赖保持性：信息不失真（不增减信息）。</p>
+</li>
+</ol>
+<h3 id="数据库三范式">数据库三范式</h3>
+<ul>
+<li>第一范式:<br>
+如果关系 R 中所有属性的值域都是简单域，其元素（即属<br>
+性）不可再分，是属性项而不是属性组,那么关系模型 R 是第一范式的，记作 RÎ1NF</li>
+<li>第二范式:<br>
+如果一个关系 R 属于 1NF，且所有的非主属性都完全依赖于主属性，则称之为第二范<br>
+式，记作 RÎ2NF。</li>
+<li>第三范式<br>
+如果一个关系 R 属于 2NF，且每个非主属性不传递依赖于主属性，这种关系是 3NF，<br>
+记作 RÎ3NF。</li>
+</ul>
+<p>BC范式(非重要点):如果关系模型 R∈1NF，且 R 中每一个函数依赖关系中的决定因素都<br>
+包含码，则 R 是满足 BC 范式的关系，记作 RÎBCNF。</p>
+<h2 id="设计模式">设计模式</h2>
+<p>Bridge(桥接模式): 特点是实现接口与实现的分离</p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[解决ConditionOnBean(DataSource.class)的加载顺序的问题]]></title>
         <id>https://zblzbl1991.github.io/post/jie-jue-conditiononbeandatasourceclassde-jia-zai-shun-xu-de-wen-ti/</id>
